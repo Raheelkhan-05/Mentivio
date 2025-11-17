@@ -147,28 +147,6 @@ def generate_quiz():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# @app.route('/generate-flashcards', methods=['POST'])
-# def generate_flashcards():
-#     """Generate flashcards from materials"""
-#     try:
-#         data = request.json
-#         topic = data.get('topic')
-#         user_id = data.get('user_id')
-#         material_id = data.get('material_id')
-#         num_cards = data.get('num_cards', 10)
-#         use_all_materials = data.get('use_all_materials', False)
-        
-#         flashcards = quiz_generator.generate_flashcards(
-#             topic,
-#             user_id,
-#             material_id,
-#             num_cards,
-#             use_all_materials
-#         )
-#         return jsonify({"flashcards": flashcards}), 200
-#     except Exception as e:
-#         return jsonify({"error": str(e)}), 500
-
 @app.route('/generate-flashcards', methods=['POST'])
 def generate_flashcards():
     try:

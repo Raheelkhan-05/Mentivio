@@ -15,7 +15,7 @@ const Header = () => {
     { name: "Home", href: "#home" },
     { name: "Features", href: "#features" },
     { name: "How It Works", href: "#how-it-works" },
-    { name: "About", href: "#about" },
+    { name: "About", href: "/about" },
   ];
 
   const privateNavItems = [
@@ -28,27 +28,40 @@ const Header = () => {
 
   const navItems = user ? privateNavItems : publicNavItems;
 
-  // ✅ Smooth scrolling logic (only for public links)
-  const handleNavClick = (e, href) => {
+  // Update handleNavClick (only for public links)
+  const handleNavClick = (e, href, isMobile = false) => {
     e.preventDefault();
+
+    // If it's a full route (not an anchor)
     if (!href.startsWith("#")) {
       navigate(href);
+      if (isMobile) setIsMenuOpen(false);
       return;
     }
 
     const id = href.replace("#", "");
 
+    const scrollToSection = () => {
+      const el = document.getElementById(id);
+      if (el) {
+        // Add a tiny delay if menu just closed (mobile)
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: "smooth" });
+        }, isMobile ? 300 : 0);
+      }
+    };
+
     if (location.pathname !== "/") {
       navigate("/", { replace: false });
-      setTimeout(() => {
-        const el = document.getElementById(id);
-        if (el) el.scrollIntoView({ behavior: "smooth" });
-      }, 400);
+      setTimeout(scrollToSection, 400);
     } else {
-      const el = document.getElementById(id);
-      if (el) el.scrollIntoView({ behavior: "smooth" });
+      scrollToSection();
     }
+
+    // Close menu after triggering scroll
+    if (isMobile) setIsMenuOpen(false);
   };
+
 
   const handleAuthClick = () => {
     if (user) {
@@ -60,7 +73,7 @@ const Header = () => {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200">
+    <header className="fixed top-0 left-0 w-full z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 will-change-transform transform-none">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
