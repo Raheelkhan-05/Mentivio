@@ -1,8 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, Twitter, Linkedin, Github, Mail } from 'lucide-react';
+import { BookOpen, Linkedin, Github, Mail } from 'lucide-react';
 
-// Removed ': React.FC' type annotation
 const Footer = () => {
   const footerLinks = {
     Product: ['Features', 'AI Tutoring', 'Goal Guidance', 'Study Chat', 'Pricing'],
@@ -12,9 +11,9 @@ const Footer = () => {
   };
 
   const socialLinks = [
-    { icon: Linkedin, href: '#', label: 'LinkedIn' },
-    { icon: Github, href: '#', label: 'GitHub' },
-    { icon: Mail, href: '#', label: 'Email' }
+    { icon: Linkedin, href: '/', label: 'LinkedIn' },
+    { icon: Github, href: '/', label: 'GitHub' },
+    { icon: Mail, href: '/', label: 'Email' }
   ];
 
   return (
@@ -74,7 +73,7 @@ const Footer = () => {
                 {links.map((link) => (
                   <li key={link}>
                     <a
-                      href="#"
+                      href="/"
                       className="text-gray-400 hover:text-green-400 transition-colors duration-200"
                     >
                       {link}

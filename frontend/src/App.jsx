@@ -13,6 +13,7 @@ import Layout from './pages/Layout';
 import ScrollToTop from './components/ScrollToTop';
 import Tutor from './pages/Tutor';
 import About from './pages/About';
+import ProtectedRoute from './components/ProtectedRoute';
 
 
 // Removed ': React.FC' type annotation
@@ -28,7 +29,7 @@ const App = () => {
               <Route path="/" element={<Home />} />
               <Route path="*" element={<NotFound />} />
               <Route path="/login" element={<Login />} />
-              <Route path="/tutor" element={<Tutor />} />
+              <Route path="/tutor" element={<ProtectedRoute> <Tutor /> </ProtectedRoute>} />
               <Route path="/about" element={<About />} />
             </Route>
           </Routes>

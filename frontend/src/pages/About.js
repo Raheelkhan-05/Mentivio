@@ -1,11 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../components/AuthContext';
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { BookOpen, Bot, Users, BarChart3, Sparkles, Zap, Target, ArrowRight, CheckCircle2, Brain, Rocket } from 'lucide-react';
 
 const About = () => {
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
     const navigate = useNavigate();
   const features = [
     {
