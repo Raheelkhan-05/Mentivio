@@ -26,3 +26,5 @@ venv/
 # IDE
 .vscode/
 .idea/
+
+uploads/

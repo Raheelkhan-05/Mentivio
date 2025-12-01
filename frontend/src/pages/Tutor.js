@@ -5,11 +5,14 @@ import Quiz from '../components/Quiz';
 import Flashcards from '../components/Flashcards';
 import Dashboard from '../components/Dashboard';
 import { getMaterials, getProgress } from '../services/api';
+import { useAuth } from '../components/AuthContext';
 import './App.css';
 
 function Tutor() {
   const [activeTab, setActiveTab] = useState('chat');
-  const [userId] = useState('user_123'); // In production, get from auth
+  // const [userId] = useState('user_123'); // In production, get from auth
+  const { user, loading } = useAuth();
+  const userId = user?.userId || null;
   const [materials, setMaterials] = useState([]);
   const [selectedMaterial, setSelectedMaterial] = useState(null);
   const [useAllMaterials, setUseAllMaterials] = useState(false);
