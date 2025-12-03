@@ -30,7 +30,7 @@ export const deleteMaterial = async (materialId) => {
 };
 
 // Ask Question
-export const askQuestion = async (question, userId, materialId, useAllMaterials = false) => {
+export const askQuestion = async (question, userId, chatId, materialId, useAllMaterials) => {
   const response = await fetch(`${API_BASE}/tutor/ask`, {
     method: 'POST',
     headers: {
@@ -39,22 +39,20 @@ export const askQuestion = async (question, userId, materialId, useAllMaterials 
     body: JSON.stringify({
       question,
       userId,
+      chatId,
       materialId,
       useAllMaterials
     }),
   });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to get answer');
-  }
-
+  if (!response.ok) throw new Error('Failed to get answer');
   return response.json();
 };
 
+
 // Ask Socratic Question
-export const askSocratic = async (question, userId, materialId, useAllMaterials = false) => {
-  const response = await fetch(`${API_BASE}/ask-socratic`, {
+export const askSocratic = async (question, userId, chatId, materialId, useAllMaterials = false) => {
+  const response = await fetch(`${API_BASE}/tutor/socratic`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -62,6 +60,7 @@ export const askSocratic = async (question, userId, materialId, useAllMaterials 
     body: JSON.stringify({
       question,
       userId,
+      chatId,
       materialId,
       useAllMaterials
     }),

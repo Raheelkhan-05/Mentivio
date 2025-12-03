@@ -21,6 +21,7 @@ export const AuthProvider = ({ children }) => {
   const saveUserSession = async (firebaseUser) => {
     if (!firebaseUser) {
       setUser(null);
+      localStorage.removeItem("activeChatId");
       localStorage.removeItem("user");
       return;
     }
@@ -55,6 +56,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     await signOut(auth);
     setUser(null);
+    localStorage.removeItem("activeChatId");
     localStorage.removeItem("user");
   };
 
@@ -65,6 +67,7 @@ export const AuthProvider = ({ children }) => {
         await saveUserSession(firebaseUser);
       } else {
         setUser(null);
+        localStorage.removeItem("activeChatId");
         localStorage.removeItem("user");
       }
       setLoading(false);

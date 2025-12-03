@@ -10,7 +10,6 @@ import './App.css';
 
 function Tutor() {
   const [activeTab, setActiveTab] = useState('chat');
-  // const [userId] = useState('user_123'); // In production, get from auth
   const { user, loading } = useAuth();
   const userId = user?.userId || null;
   const [materials, setMaterials] = useState([]);
@@ -19,9 +18,11 @@ function Tutor() {
   const [progress, setProgress] = useState(null);
 
   useEffect(() => {
-    loadMaterials();
-    loadProgress();
-  }, []);
+    if (!loading && user?.userId) {
+      loadMaterials();
+      loadProgress();
+    }
+  }, [loading, user?.userId]);
 
   const loadMaterials = async () => {
     try {

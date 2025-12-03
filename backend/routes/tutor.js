@@ -3,16 +3,120 @@ const router = express.Router();
 const axios = require('axios');
 const Quiz = require('../models/Quiz');
 const Progress = require('../models/Progress');
+const ChatSession = require('../models/ChatSession');
+const ChatMessage = require('../models/ChatMessage');
 
 const FLASK_URL = process.env.FLASK_SERVICE_URL || 'http://localhost:5000';
 
-// Ask a question (Contextual Q&A)
+async function saveMessage(chatId, role, content, mode, metadata = {}) {
+  try {
+    await ChatMessage.create({
+      chatId,
+      role,
+      content,
+      mode,
+      metadata
+    });
+  } catch (err) {
+    console.error("Error saving chat message:", err.message);
+  }
+}
+
+router.post('/new', async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    const chat = await ChatSession.create({ userId });
+    res.json({ chat });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+router.get('/list/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const chats = await ChatSession.find({ userId }).sort({ updatedAt: -1 });
+    res.json({ chats });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/rename/:chatId', async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const { title } = req.body;
+
+    await ChatSession.findByIdAndUpdate(chatId, { title });
+    res.json({ message: "Chat renamed successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+router.delete('/delete/:chatId', async (req, res) => {
+  try {
+    const { chatId } = req.params;
+
+    await ChatSession.findByIdAndDelete(chatId);
+    await ChatMessage.deleteMany({ chatId });
+
+    res.json({ message: "Chat deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/messages/:chatId', async (req, res) => {
+  try {
+    const { chatId } = req.params;
+
+    const messages = await ChatMessage.find({ chatId })
+      .sort({ createdAt: 1 });
+
+    res.json({ messages });
+  } catch (err) {
+    console.error("Messages load error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/add-message', async (req, res) => {
+  try {
+    const { chatId, role, content, mode, metadata } = req.body;
+
+    if (!chatId || chatId.length !== 24) {
+      return res.status(400).json({ error: "Invalid chatId" });
+    }
+
+
+    const message = await ChatMessage.create({
+      chatId,
+      role,
+      content,
+      mode,
+      metadata
+    });
+
+    // Update session timestamp
+    await ChatSession.findByIdAndUpdate(chatId, { updatedAt: Date.now() });
+
+    res.json({ message });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/ask', async (req, res) => {
   try {
-    const { question, userId, materialId, useAllMaterials } = req.body;
+    const { question, userId, chatId, materialId, useAllMaterials } = req.body;
 
-    if (!question || !userId) {
-      return res.status(400).json({ error: 'Question and userId are required' });
+    if (!question || !userId || !chatId) {
+      return res.status(400).json({ error: 'question, userId and chatId are required' });
     }
 
     const response = await axios.post(`${FLASK_URL}/ask-question`, {
@@ -21,6 +125,18 @@ router.post('/ask', async (req, res) => {
       material_id: materialId,
       use_all_materials: useAllMaterials || false
     });
+
+    await saveMessage(chatId, "user", question, "normal");
+
+    await saveMessage(
+      chatId,
+      "assistant",
+      response.data.answer,
+      response.data.mode || 'document_based',
+      { sources: response.data.sources || [] }
+    );
+
+    await ChatSession.findByIdAndUpdate(chatId, { updatedAt: Date.now() });
 
     res.json(response.data);
   } catch (error) {
@@ -45,57 +161,25 @@ router.post('/socratic', async (req, res) => {
       use_all_materials: useAllMaterials || false
     });
 
+    await saveMessage(chatId, "user", question, "normal");
+
+    await saveMessage(
+      chatId,
+      "assistant",
+      response.data.answer,
+      response.data.mode || 'document_based',
+      { sources: response.data.sources || [] }
+    );
+
+    await ChatSession.findByIdAndUpdate(chatId, { updatedAt: Date.now() });
+
+
     res.json(response.data);
   } catch (error) {
     console.error('Socratic question error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
-
-// // Generate quiz
-// router.post('/generate-quiz', async (req, res) => {
-//   try {
-//     const { topic, userId, materialId, numQuestions, difficulty, useAllMaterials } = req.body;
-
-//     if (!topic || !userId) {
-//       return res.status(400).json({ error: 'Topic and userId are required' });
-//     }
-
-//     const response = await axios.post(`${FLASK_URL}/generate-quiz`, {
-//       topic,
-//       user_id: userId,
-//       material_id: materialId,
-//       num_questions: numQuestions || 5,
-//       difficulty: difficulty || 'medium',
-//       use_all_materials: useAllMaterials || false
-//     });
-
-//     if (response.data.quiz) {
-//       // Save quiz to database
-//       const quiz = new Quiz({
-//         userId,
-//         materialId,
-//         topic,
-//         difficulty: difficulty || 'medium',
-//         questions: response.data.quiz.questions,
-//         totalQuestions: response.data.quiz.questions.length
-//       });
-
-//       await quiz.save();
-
-//       res.json({
-//         quizId: quiz._id,
-//         quiz: response.data.quiz
-//       });
-//     } else {
-//       res.status(500).json({ error: 'Failed to generate quiz' });
-//     }
-//   } catch (error) {
-//     console.error('Generate quiz error:', error.message);
-//     res.status(500).json({ error: error.message });
-//   }
-// });
-
 
 // Generate quiz
 router.post('/generate-quiz', async (req, res) => {
@@ -168,19 +252,6 @@ router.post('/submit-quiz', async (req, res) => {
     // Calculate results
     let correctCount = 0;
     const correctAnswers = [];
-
-    // quiz.questions.forEach((question, index) => {
-    //   const userAnswer = answers[index];
-      
-    //   question.userAnswer = userAnswer;
-    //   question.isCorrect = userAnswer === question.correctAnswer;
-      
-    //   if (question.isCorrect) {
-    //     correctCount++;
-    //   }
-      
-    //   correctAnswers.push(question.correctAnswer);
-    // });
 
     quiz.questions.forEach((question, index) => {
     const userAnswer = answers[index];

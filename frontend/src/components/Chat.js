@@ -1,246 +1,299 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { askQuestion, askSocratic, clearConversation } from '../services/api';
+import React, { useState, useRef, useEffect } from "react";
+import { askQuestion, askSocratic } from "../services/api";
+import { useAuth } from '../components/AuthContext';
+import { useLocation } from "react-router-dom";
+
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:4000/api';
 
 function Chat({ userId, materialId, useAllMaterials }) {
+  const location = useLocation();
+  const [chatListLoading, setChatListLoading] = useState(true);
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
+  const [chatList, setChatList] = useState([]);
+  const [activeChatId, setActiveChatId] = useState(null);
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState('normal'); // 'normal' or 'socratic'
-  const messagesEndRef = useRef(null);
+  const [mode, setMode] = useState("normal"); // normal | socratic
+  const { user, loads } = useAuth();
+  const curr_user = user?.userId || null;
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const messagesEndRef = useRef(null);
+  const scrollToBottom = () =>
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+
+
+  // Load Chat List
+  const loadChatList = async () => {
+    setChatListLoading(true); // start loading
+    try {
+      const res = await fetch(`${API_BASE}/tutor/list/${userId}`);
+      const data = await res.json();
+      setChatList(data.chats || []);
+    } catch (err) {
+      console.error("Chat list error:", err);
+    } finally {
+      setChatListLoading(false); // finished loading
+    }
   };
 
+  useEffect(() => {
+  if (!userId) return; // wait until userId is loaded
+
+  (async () => {
+    await loadChatList();
+
+    const savedChatId = localStorage.getItem("activeChatId");
+    if (savedChatId) {
+      await loadMessages(savedChatId);
+    }
+  })();
+}, [userId]);
+
+
+  // New Chat
+  const handleNewChat = () => {
+    setActiveChatId(null);
+    localStorage.removeItem("activeChatId");
+    setMessages([]);
+  };
+
+  // Load Messages of a Chat
+  const loadMessages = async (chatId) => {
+    try {
+      setActiveChatId(chatId);
+      localStorage.setItem("activeChatId", chatId);
+
+      const res = await fetch(`${API_BASE}/tutor/messages/${chatId}`);
+      const data = await res.json();
+
+      setMessages(data.messages || []);
+    } catch (err) {
+      console.error("Load messages error:", err);
+    }
+  };
+
+  // Rename Chat
+  const renameChat = async (chatId) => {
+    const newTitle = prompt("Enter chat name:");
+    if (!newTitle) return;
+
+    await fetch(`${API_BASE}/tutor/rename/${chatId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: newTitle }),
+    });
+
+    loadChatList();
+  };
+
+  // Delete Chat
+  const deleteChat = async (chatId) => {
+    if (!window.confirm("Delete this chat permanently?")) return;
+
+    await fetch(`${API_BASE}/tutor/delete/${chatId}`, { method: "DELETE" });
+
+    if (chatId === activeChatId) {
+      setMessages([]);
+      setActiveChatId(null);
+    }
+
+    loadChatList();
+  };
+
+  // Scroll messages down
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  const handleClearConversation = async () => {
-    if (window.confirm('Are you sure you want to clear the conversation history?')) {
-      try {
-        await clearConversation(userId);
-        setMessages([]);
-      } catch (error) {
-        console.error('Error clearing conversation:', error);
-      }
-    }
-  };
-
+  // Send Message
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
+  if (!input.trim() || loading) return;
 
-    if (!input.trim() || loading) return;
+  setLoading(true);
+  const userMsg = { role: "user", content: input };
+  setMessages((prev) => [...prev, userMsg]);
 
-    const userMessage = {
-      role: 'user',
-      content: input
+  let chatId = activeChatId;
+
+  // CREATE NEW CHAT ONLY WHEN USER SENDS FIRST MESSAGE
+  if (!chatId) {
+    const res = await fetch(`${API_BASE}/tutor/new`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+
+    const data = await res.json();
+    chatId = data.chat._id;
+    setActiveChatId(chatId);
+    localStorage.setItem("activeChatId", chatId);  // SAVE NEW CHAT ID
+  }
+
+  const text = input;
+  setInput("");
+
+  try {
+    let response;
+    let aiMsg;
+
+    if (mode === "socratic") {
+      response = await askSocratic(text, userId, chatId, materialId, useAllMaterials);
+      aiMsg = {
+        role: "assistant",
+        mode: "socratic",
+        content: response.questions?.join("\n\n") || "No questions.",
+        hint: response.hint || null,
+      };
+    } else {
+      response = await askQuestion(text, userId, chatId, materialId, useAllMaterials);
+      aiMsg = {
+        role: "assistant",
+        mode: response.mode || "document_based",
+        content: typeof response.answer === "string"
+          ? response.answer
+          : JSON.stringify(response.answer, null, 2),
+        sources: response.sources || [],
+      };
+    }
+
+    const bumpChatToTop = (chatId) => {
+      setChatList((prev) => {
+        const chat = prev.find((c) => c._id === chatId);
+        if (!chat) return prev;
+
+        // update updatedAt locally
+        const updatedChat = { ...chat, updatedAt: new Date().toISOString() };
+
+        // move to top
+        return [updatedChat, ...prev.filter((c) => c._id !== chatId)];
+      });
     };
 
-    setMessages((prev) => [...prev, userMessage]);
-    setInput('');
-    setLoading(true);
+    bumpChatToTop(chatId);
+    setMessages((prev) => [...prev, aiMsg]);
 
-    try {
-      let response;
-
-      if (mode === 'socratic') {
-        response = await askSocratic(input, userId, materialId, useAllMaterials);
-
-        const aiMessage = {
-          role: 'assistant',
-          content: Array.isArray(response.questions)
-            ? response.questions.join('\n\n')
-            : String(response.questions || 'No questions generated.'),
-          hint: response.hint || null,
-          mode: 'socratic'
-        };
-
-        setMessages((prev) => [...prev, aiMessage]);
-      } else {
-        response = await askQuestion(input, userId, materialId, useAllMaterials);
-
-        const aiMessage = {
-          role: 'assistant',
-          content: typeof response.answer === 'string'
-            ? response.answer
-            : JSON.stringify(response.answer, null, 2),
-          sources: Array.isArray(response.sources) ? response.sources : [],
-          mode: response.mode || 'document_based'
-        };
-
-        setMessages((prev) => [...prev, aiMessage]);
-      }
-    } catch (error) {
-      const errorMessage = {
-        role: 'assistant',
-        content: 'Sorry, I encountered an error: ' + error.message,
-        error: true
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setLoading(false);
+    // AUTO-RENAME CHAT AFTER FIRST AI MESSAGE
+    if (messages.length === 0) {
+      const title = aiMsg.content.split(" ").slice(0, 8).join(" ");
+      await fetch(`${API_BASE}/tutor/rename/${chatId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+      });
+      loadChatList();
     }
-  };
+    
 
-  const getModeLabel = (messageMode) => {
-    switch (messageMode) {
-      case 'general':
-        return '💬 General';
-      case 'knowledge_base':
-        return '🧠 Knowledge Base';
-      case 'document_based':
-        return '📚 From Materials';
-      case 'fallback':
-        return '🔍 General Knowledge';
-      default:
-        return '';
-    }
-  };
+
+  } catch (error) {
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", error: true, content: "Error: " + error.message }
+    ]);
+  }
+
+  setLoading(false);
+};
 
   return (
-    <div className="chat-container">
-      <div className="chat-header">
-        <div>
-          <h2>AI Tutor Chat</h2>
-          {useAllMaterials && (
-            <span className="mode-badge">🧠 Knowledge Mode: Using general AI knowledge</span>
-          )}
+    <div className="chat-layout">
+
+      {/* --------------------------------------------------
+          Sidebar: Chat List
+      ----------------------------------------------------- */}
+      <div className="chat-sidebar">
+        <div className="sidebar-header">
+          <h3>Your Chats</h3>
+          <button onClick={handleNewChat}>➕ New Chat</button>
         </div>
-        <div className="header-controls">
+
+        {chatListLoading ? (
+          <p>Loading chats...</p> // can replace with a spinner if you have one
+        ) : chatList.length === 0 ? (
+          <p>No chats yet.</p>
+        ) : (
+          <ul className="chat-list">
+            {chatList.map((chat) => (
+              <li
+                key={chat._id}
+                className={activeChatId === chat._id ? "active" : ""}
+              >
+                <span onClick={() => loadMessages(chat._id)}>
+                  {chat.title || "Untitled Chat"}
+                </span>
+                <div className="chat-actions">
+                  <button onClick={() => renameChat(chat._id)}>✏️</button>
+                  <button onClick={() => deleteChat(chat._id)}>🗑️</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+
+      {/* --------------------------------------------------
+          Chat Window
+      ----------------------------------------------------- */}
+      <div className="chat-container">
+
+        <div className="chat-header">
+          <h2>AI Tutor</h2>
+
           <div className="mode-toggle">
             <button
-              className={mode === 'normal' ? 'active' : ''}
-              onClick={() => setMode('normal')}
-              title="Get direct answers"
+              className={mode === "normal" ? "active" : ""}
+              onClick={() => setMode("normal")}
             >
               Direct Answer
             </button>
             <button
-              className={mode === 'socratic' ? 'active' : ''}
-              onClick={() => setMode('socratic')}
-              title="Learn through guided questions"
+              className={mode === "socratic" ? "active" : ""}
+              onClick={() => setMode("socratic")}
             >
-              Socratic Mode 🤔
+              Socratic 🤔
             </button>
           </div>
-          <button 
-            className="clear-btn" 
-            onClick={handleClearConversation}
-            title="Clear conversation history"
-          >
-            🗑️ Clear
-          </button>
         </div>
-      </div>
 
-      {mode === 'socratic' && (
-        <div className="mode-info">
-          <p>🤔 Socratic Mode: I'll guide you to discover answers through thoughtful questions</p>
-        </div>
-      )}
-
-      <div className="messages-container">
-        {messages.length === 0 && (
-          <div className="welcome-message">
-            <h3>👋 Hi! I'm your AI Tutor</h3>
-            <p>
-              {useAllMaterials 
-                ? "I'll answer using my general knowledge base. Ask me anything!"
-                : "Ask me anything about your study materials!"}
-            </p>
-            <div className="example-questions">
-              <p>Try asking:</p>
-              <ul>
-                {useAllMaterials ? (
-                  <>
-                    <li>"What is machine learning?"</li>
-                    <li>"Explain quantum physics simply"</li>
-                    <li>"How does photosynthesis work?"</li>
-                  </>
-                ) : (
-                  <>
-                    <li>"Explain the main concept in chapter 1"</li>
-                    <li>"What's the difference between X and Y?"</li>
-                    <li>"Give me an example of..."</li>
-                  </>
-                )}
-              </ul>
+        <div className="messages-container">
+          {messages.map((msg, i) => (
+            <div key={i} className={`message ${msg.role}`}>
+              <div className="message-text">{msg.content}</div>
+              {msg.hint && <div className="hint">💡 {msg.hint}</div>}
             </div>
-          </div>
-        )}
+          ))}
 
-        {messages.map((message, index) => (
-          <div key={index} className={`message ${message.role} ${message.error ? 'error' : ''}`}>
-            <div className="message-content">
-              {message.mode && message.role === 'assistant' && (
-                <div className="message-mode-badge">
-                  {getModeLabel(message)}
-                </div>
-              )}
-              
-              <div className="message-text">
-                {typeof message.content === 'object'
-                  ? <pre>{JSON.stringify(message.content, null, 2)}</pre>
-                  : message.content}
+          {loading && (
+            <div className="message assistant">
+              <div className="typing">
+                <span></span><span></span><span></span>
               </div>
-
-              {message.hint && (
-                <div className="hint">
-                  💡 <strong>Hint:</strong> {message.hint}
-                </div>
-              )}
-
-              {message.sources && message.sources.length > 0 && (
-                <div className="sources">
-                  <details>
-                    <summary>📚 Sources ({message.sources.length})</summary>
-                    {message.sources.map((source, idx) => (
-                      <div key={idx} className="source-item">
-                        <p>{source.content}</p>
-                        {source.similarity !== undefined && (
-                          <span className="similarity">
-                            Relevance: {(source.similarity * 100).toFixed(0)}%
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </details>
-                </div>
-              )}
             </div>
-          </div>
-        ))}
+          )}
 
-        {loading && (
-          <div className="message assistant">
-            <div className="typing-indicator">
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-          </div>
-        )}
+          <div ref={messagesEndRef}></div>
+        </div>
 
-        <div ref={messagesEndRef} />
+        {/* --------------------------------------------------
+            Input Form
+        ----------------------------------------------------- */}
+        <form onSubmit={handleSubmit} className="chat-input-form">
+          <input
+            type="text"
+            value={input}
+            disabled={loading}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={
+              activeChatId ? "Type your message..." : "Start a new chat first"
+            }
+          />
+          <button type="submit" disabled={!input.trim() || loading}>
+            Send
+          </button>
+        </form>
       </div>
-
-      <form onSubmit={handleSubmit} className="chat-input-form">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder={
-            useAllMaterials 
-              ? "Ask me anything..." 
-              : "Ask about your materials..."
-          }
-          disabled={loading}
-        />
-        <button type="submit" disabled={loading || !input.trim()}>
-          {loading ? '...' : 'Send'}
-        </button>
-      </form>
     </div>
   );
 }
