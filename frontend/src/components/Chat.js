@@ -183,8 +183,6 @@ function Chat({ userId, materialId, useAllMaterials }) {
       });
       loadChatList();
     }
-    
-
 
   } catch (error) {
     setMessages((prev) => [

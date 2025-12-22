@@ -118,12 +118,13 @@ router.post('/ask', async (req, res) => {
     if (!question || !userId || !chatId) {
       return res.status(400).json({ error: 'question, userId and chatId are required' });
     }
-
+    
     const response = await axios.post(`${FLASK_URL}/ask-question`, {
       question,
-      user_id: userId,
-      material_id: materialId,
-      use_all_materials: useAllMaterials || false
+      userId,
+      chatId,
+      materialId,
+      useAllMaterials
     });
 
     await saveMessage(chatId, "user", question, "normal");

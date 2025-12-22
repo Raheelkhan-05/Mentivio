@@ -59,49 +59,33 @@ def process_document():
 
 @app.route('/ask-question', methods=['POST'])
 def ask_question():
-    """Contextual Q&A from user's materials with conversation memory"""
     try:
         data = request.json
         question = data.get('question')
-        user_id = data.get('user_id')
-        material_id = data.get('material_id')
-        use_all_materials = data.get('use_all_materials', False)
-        
-        if not question or not user_id:
+        user_id = data.get('userId')
+        chat_id = data.get('chatId')
+        material_id = data.get('materialId')
+        use_all_materials = data.get('useAllMaterials', False)
+
+        if not question or not user_id or not chat_id:
             return jsonify({"error": "Missing required fields"}), 400
-        
+
         result = qa_service.answer_question(
-            question, 
-            user_id, 
-            material_id, 
+            question,
+            user_id,
+            chat_id,
+            material_id,
             use_all_materials
         )
-        
+
         return jsonify(result), 200
-        
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({"--error": str(e)}), 500
+
     
-
-@app.route('/clear-conversation', methods=['POST'])
-def clear_conversation():
-    """Clear conversation history for a user"""
-    try:
-        data = request.json
-        user_id = data.get('user_id')
-        
-        if not user_id:
-            return jsonify({"error": "Missing user_id"}), 400
-        
-        qa_service.clear_conversation(user_id)
-        
-        return jsonify({
-            "message": "Conversation history cleared successfully"
-        }), 200
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 
 @app.route('/socratic-question', methods=['POST'])
 def socratic_question():

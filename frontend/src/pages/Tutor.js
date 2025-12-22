@@ -14,7 +14,7 @@ function Tutor() {
   const userId = user?.userId || null;
   const [materials, setMaterials] = useState([]);
   const [selectedMaterial, setSelectedMaterial] = useState(null);
-  const [useAllMaterials, setUseAllMaterials] = useState(false);
+  const [useAllMaterials, setUseAllMaterials] = useState(true);
   const [progress, setProgress] = useState(null);
 
   useEffect(() => {

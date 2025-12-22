@@ -24,8 +24,8 @@ class DocumentProcessor:
         
         # Text splitter
         self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200,
+            chunk_size=4000,
+            chunk_overlap=400,
             length_function=len
         )
     
