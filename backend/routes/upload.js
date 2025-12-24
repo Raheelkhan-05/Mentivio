@@ -5,19 +5,19 @@ const path = require('path');
 const axios = require('axios');
 const Material = require('../models/Material');
 
-// Configure multer for file upload
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
+// // Configure multer for file upload
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => {
+//     cb(null, 'uploads/');
+//   },
+//   filename: (req, file, cb) => {
+//     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+//     cb(null, uniqueSuffix + path.extname(file.originalname));
+//   }
+// });
 
 const upload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['.pdf', '.txt'];
     const ext = path.extname(file.originalname).toLowerCase();
@@ -27,7 +27,7 @@ const upload = multer({
       cb(new Error('Only PDF and TXT files are allowed'));
     }
   },
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
 });
 
 // Upload material
@@ -48,7 +48,6 @@ router.post('/', upload.single('file'), async (req, res) => {
       userId,
       title: title || req.file.originalname,
       fileName: req.file.originalname,
-      filePath: req.file.path,
       fileType: path.extname(req.file.originalname).toLowerCase(),
       subject: subject || 'General',
       topics: topics ? JSON.parse(topics) : [],
@@ -56,16 +55,18 @@ router.post('/', upload.single('file'), async (req, res) => {
     });
 
     await material.save();
-    const absolutePath = path.resolve(req.file.path);
+    
     // Send to Flask service for processing
     try {
-      const flaskResponse = await axios.post(
+       const flaskResponse = await axios.post(
         `${process.env.FLASK_SERVICE_URL || 'http://localhost:5000'}/process-document`,
         {
-          file_path: absolutePath,
+          file_buffer: req.file.buffer.toString('base64'),
+          file_name: req.file.originalname,
           user_id: userId,
           material_id: material._id.toString()
-        }
+        },
+        { timeout: 5 * 60 * 1000 } // 5 min timeout for PDFs
       );
 
       if (flaskResponse.data.success) {

@@ -5,6 +5,8 @@ from services.qa_service import QAService
 from services.quiz_generator import QuizGenerator
 from services.socratic_tutor import SocraticTutor
 import os
+import tempfile
+import base64
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -26,31 +28,32 @@ def health():
 def process_document():
     try:
         data = request.get_json(force=True)
-        file_path = data.get('file_path')
+        file_buffer = data.get('file_buffer')
+        file_name = data.get('file_name')
         user_id = data.get('user_id')
         material_id = data.get('material_id')
 
-        print("Received data:", data)
+        if not file_buffer:
+            return jsonify({"success": False, "error": "Missing file_buffer"}), 400
 
-        if not file_path:
-            return jsonify({"success": False, "error": "Missing file_path"}), 400
+        # Decode file
+        file_bytes = base64.b64decode(file_buffer)
 
-        # Normalize path (handles both \\ and /)
-        file_path = os.path.normpath(file_path)
+        # Create temp file
+        suffix = os.path.splitext(file_name)[1]
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(file_bytes)
+            temp_path = tmp.name
 
-        # Optional: restrict access to uploads directory
-        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-        full_path = os.path.join(base_dir, file_path) if not os.path.isabs(file_path) else file_path
-
-        if not os.path.exists(full_path):
-            return jsonify({
-                "success": False,
-                "error": f"File not found at {full_path}"
-            }), 400
-
-        result = doc_processor.process_document(full_path, user_id, material_id)
-        print("Processing Done...", result)
-        return jsonify(result), 200
+        try:
+            result = doc_processor.process_document(
+                temp_path, user_id, material_id
+            )
+            return jsonify(result), 200
+        finally:
+            # DELETE FILE AFTER PROCESSING
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
 
     except Exception as e:
         print("Error in /process-document:", str(e))
