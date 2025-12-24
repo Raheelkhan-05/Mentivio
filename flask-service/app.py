@@ -85,21 +85,21 @@ def ask_question():
         traceback.print_exc()
         return jsonify({"--error": str(e)}), 500
 
-    
-
 @app.route('/socratic-question', methods=['POST'])
 def socratic_question():
     """Socratic questioning mode"""
     try:
         data = request.json
         question = data.get('question')
-        user_id = data.get('user_id')
-        material_id = data.get('material_id')
-        use_all_materials = data.get('use_all_materials', False)
+        user_id = data.get('userId')
+        material_id = data.get('materialId')
+        chat_id = data.get('chatId')
+        use_all_materials = data.get('useAllMaterials', False)
         
         response = socratic_tutor.generate_questions(
             question,
             user_id,
+            chat_id,
             material_id,
             use_all_materials
         )

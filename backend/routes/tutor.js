@@ -126,6 +126,7 @@ router.post('/ask', async (req, res) => {
       materialId,
       useAllMaterials
     });
+    console.log("Ask response:", response.data);
 
     await saveMessage(chatId, "user", question, "normal");
 
@@ -149,35 +150,37 @@ router.post('/ask', async (req, res) => {
 // Socratic questioning mode
 router.post('/socratic', async (req, res) => {
   try {
-    const { question, userId, materialId, useAllMaterials } = req.body;
+    const { question, userId, chatId, materialId, useAllMaterials } = req.body;
 
-    if (!question || !userId) {
-      return res.status(400).json({ error: 'Question and userId are required' });
+    if (!question || !userId || !chatId) {
+      return res.status(400).json({ error: 'question, userId and chatId are required' });
     }
 
     const response = await axios.post(`${FLASK_URL}/socratic-question`, {
-      question,
-      user_id: userId,
-      material_id: materialId,
-      use_all_materials: useAllMaterials || false
+        question,
+        userId,
+        chatId,
+        materialId,
+        useAllMaterials
     });
+    console.log("Socratic response:", response.data.questions);
 
-    await saveMessage(chatId, "user", question, "normal");
+    await saveMessage(chatId, "user", question, "socratic");
 
     await saveMessage(
       chatId,
       "assistant",
-      response.data.answer,
-      response.data.mode || 'document_based',
-      { sources: response.data.sources || [] }
+      response.data.questions.answer,
+      response.data.questions.mode || 'document_based',
+      { sources: response.data.questions.sources || [] }
     );
 
     await ChatSession.findByIdAndUpdate(chatId, { updatedAt: Date.now() });
 
 
-    res.json(response.data);
+    res.json(response.data.questions);
   } catch (error) {
-    console.error('Socratic question error:', error.message);
+    console.error('Socratic question error---:', error.message);
     res.status(500).json({ error: error.message });
   }
 });

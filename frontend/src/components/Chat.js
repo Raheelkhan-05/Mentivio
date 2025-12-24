@@ -142,7 +142,7 @@ function Chat({ userId, materialId, useAllMaterials }) {
       aiMsg = {
         role: "assistant",
         mode: "socratic",
-        content: response.questions?.join("\n\n") || "No questions.",
+        content: typeof response.answer === "string" ? response.answer : "No questions.",
         hint: response.hint || null,
       };
     } else {
