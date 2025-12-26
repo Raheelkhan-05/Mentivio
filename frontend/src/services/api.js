@@ -123,27 +123,188 @@ export const submitQuiz = async (quizId, answers) => {
   return response.json();
 };
 
-// Generate Flashcards
+
+/**
+ * Generate flashcards (UPDATED to handle new response format)
+ */
 export const generateFlashcards = async (topic, userId, materialId, numCards, useAllMaterials) => {
-  const response = await fetch(`${API_BASE}/tutor/generate-flashcards`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      topic,
-      userId,
-      materialId,
-      numCards,
-      useAllMaterials
-    })
-  });
-  return response.json();
+  try {
+    const response = await fetch(`${API_BASE}/tutor/generate-flashcards`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        topic,
+        userId,
+        materialId,
+        numCards,
+        useAllMaterials
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error generating flashcards:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get flashcard history for a user
+ */
+export const getFlashcardHistory = async (userId) => {
+  try {
+    const response = await fetch(`${API_BASE}/tutor/flashcards/history/${userId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching flashcard history:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get detailed information for a specific flashcard set
+ */
+export const getFlashcardSetDetails = async (flashcardSetId) => {
+  try {
+    const response = await fetch(`${API_BASE}/tutor/flashcards/${flashcardSetId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching flashcard set details:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update flashcard mastery status
+ */
+export const updateFlashcardMastery = async (flashcardSetId, cardIndex, mastered) => {
+  try {
+    const response = await fetch(`${API_BASE}/tutor/flashcards/${flashcardSetId}/card/${cardIndex}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ mastered }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error updating flashcard mastery:', error);
+    throw error;
+  }
+};
+
+/**
+ * Record a study session
+ */
+export const recordStudySession = async (flashcardSetId) => {
+  try {
+    const response = await fetch(`${API_BASE}/tutor/flashcards/${flashcardSetId}/study-session`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error recording study session:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete a flashcard set
+ */
+export const deleteFlashcardSet = async (flashcardSetId) => {
+  try {
+    const response = await fetch(`${API_BASE}/tutor/flashcards/${flashcardSetId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error deleting flashcard set:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get flashcard statistics
+ */
+export const getFlashcardStats = async (userId) => {
+  try {
+    const response = await fetch(`${API_BASE}/tutor/flashcards/stats/${userId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching flashcard statistics:', error);
+    throw error;
+  }
 };
 
 // Get Quiz History
-export const getQuizHistory = async (userId) => {
-  const response = await fetch(`${API_BASE}/tutor/quiz-history/${userId}`);
-  return response.json();
-};
+// export const getQuizHistory = async (userId) => {
+//   const response = await fetch(`${API_BASE}/tutor/quiz-history/${userId}`);
+//   return response.json();
+// };
 
 // Get Progress
 export const getProgress = async (userId) => {
@@ -161,4 +322,79 @@ export const getDashboardStats = async (userId) => {
 export const getTopicProgress = async (userId, topic) => {
   const response = await fetch(`${API_BASE}/progress/${userId}/topic/${encodeURIComponent(topic)}`);
   return response.json();
+};
+
+
+/**
+ * Get quiz history for a user
+ */
+export const getQuizHistory = async (userId) => {
+  try {
+    const response = await fetch(`${API_BASE}/progress/history/${userId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching quiz history:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get detailed information for a specific quiz
+ */
+export const getQuizDetails = async (quizId) => {
+  console.log("getQuizDetails");
+  try {
+    const response = await fetch(`${API_BASE}/progress/quiz/${quizId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching quiz details:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete a quiz from history
+ */
+export const deleteQuiz = async (quizId) => {
+  try {
+    const response = await fetch(`${API_BASE}/progress/${quizId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error deleting quiz:', error);
+    throw error;
+  }
 };

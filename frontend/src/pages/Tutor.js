@@ -110,8 +110,8 @@ function Tutor() {
                   <strong>{progress.totalQuizzesTaken}</strong>
                 </div>
                 <div className="stat">
-                  <span>Streak:</span>
-                  <strong>{progress.studyStreak} days 🔥</strong>
+                  <span>Current Streak:</span>
+                  <strong>{progress.currentStreak} days</strong>
                 </div>
               </div>
             )}

@@ -8,6 +8,9 @@ import os
 import tempfile
 import base64
 from dotenv import load_dotenv
+import logging
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -112,9 +115,34 @@ def socratic_question():
 
 @app.route('/generate-quiz', methods=['POST'])
 def generate_quiz():
-    """Generate quiz from materials"""
+    """
+    Generate quiz from materials with enterprise-grade validation
+    
+    Request body:
+    {
+        "topic": str,                    # User's topic (may have typos)
+        "user_id": str,                  # User identifier
+        "material_id": str | null,       # Specific material (mutually exclusive with use_all_materials)
+        "num_questions": int,            # Number of questions (3-20)
+        "difficulty": str,               # 'easy', 'medium', or 'hard'
+        "use_all_materials": bool        # Use all materials instead of specific one
+    }
+    
+    Returns:
+    {
+        "quiz": {
+            "topic": str,                # Normalized topic
+            "original_topic": str,       # User's original input
+            "difficulty": str,
+            "questions": [...],
+            "metadata": {...}
+        }
+    }
+    """
     try:
         data = request.json
+        
+        # Extract parameters
         topic = data.get('topic')
         user_id = data.get('user_id')
         material_id = data.get('material_id')
@@ -122,17 +150,65 @@ def generate_quiz():
         difficulty = data.get('difficulty', 'medium')
         use_all_materials = data.get('use_all_materials', False)
         
-        quiz = quiz_generator.generate_quiz(
-            topic,
-            user_id,
-            material_id,
-            num_questions,
-            difficulty,
-            use_all_materials
+        # Validate required fields
+        if not topic:
+            return jsonify({
+                "error": "Missing required field: 'topic'"
+            }), 400
+        
+        if not user_id:
+            return jsonify({
+                "error": "Missing required field: 'user_id'"
+            }), 400
+        
+        # Validate material scope
+        if material_id and use_all_materials:
+            return jsonify({
+                "error": "Cannot specify both 'material_id' and 'use_all_materials'. Choose one."
+            }), 400
+        
+        if not material_id and not use_all_materials:
+            return jsonify({
+                "error": "Must specify either 'material_id' or 'use_all_materials'=true"
+            }), 400
+        
+        logger.info(
+            f"Quiz generation request: user={user_id}, topic='{topic}', "
+            f"material={'specific' if material_id else 'all'}, "
+            f"questions={num_questions}, difficulty={difficulty}"
         )
+        
+        # Generate quiz
+        quiz = quiz_generator.generate_quiz(
+            topic=topic,
+            user_id=user_id,
+            material_id=material_id,
+            num_questions=num_questions,
+            difficulty=difficulty,
+            use_all_materials=use_all_materials
+        )
+        
+        # Check for errors
+        if 'error' in quiz:
+            logger.warning(f"Quiz generation failed: {quiz['error']}")
+            return jsonify(quiz), 400
+        
+        logger.info(
+            f"Quiz generated successfully: {len(quiz['questions'])} questions, "
+            f"topic: '{quiz['topic']}' (normalized from '{quiz['original_topic']}')"
+        )
+        
         return jsonify({"quiz": quiz}), 200
+        
+    except ValueError as e:
+        logger.error(f"Validation error: {e}")
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Unexpected error in generate_quiz: {e}", exc_info=True)
+        return jsonify({
+            "error": "An unexpected error occurred",
+            "details": str(e)
+        }), 500
 
 @app.route('/generate-flashcards', methods=['POST'])
 def generate_flashcards():
@@ -156,19 +232,86 @@ def generate_flashcards():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/evaluate-answers', methods=['POST'])
-def evaluate_answers():
-    """Evaluate quiz answers and provide feedback"""
-    try:
-        data = request.json
-        answers = data.get('answers')
-        correct_answers = data.get('correct_answers')
-        topic = data.get('topic')
+# @app.route('/evaluate-answers', methods=['POST'])
+# def evaluate_answers():
+#     """
+#     Evaluate quiz answers and provide personalized feedback
+    
+#     Request body:
+#     {
+#         "answers": [str],           # User's answers array
+#         "correct_answers": [str],   # Correct answers array
+#         "topic": str,               # Quiz topic
+#         "difficulty": str           # Quiz difficulty
+#     }
+    
+#     Returns:
+#     {
+#         "score": float,
+#         "correct": int,
+#         "total": int,
+#         "performance_level": str,
+#         "feedback": str,
+#         "suggested_difficulty": str,
+#         "mastery_percentage": float
+#     }
+#     """
+#     try:
+#         data = request.json
         
-        feedback = quiz_generator.evaluate_answers(answers, correct_answers, topic)
-        return jsonify({"feedback": feedback}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+#         answers = data.get('answers')
+#         correct_answers = data.get('correct_answers')
+#         topic = data.get('topic')
+#         difficulty = data.get('difficulty', 'medium')
+        
+#         # Validate inputs
+#         if not answers or not correct_answers:
+#             return jsonify({
+#                 "error": "Missing required fields: 'answers' and 'correct_answers'"
+#             }), 400
+        
+#         if not isinstance(answers, list) or not isinstance(correct_answers, list):
+#             return jsonify({
+#                 "error": "Answers must be arrays"
+#             }), 400
+        
+#         if len(answers) != len(correct_answers):
+#             return jsonify({
+#                 "error": f"Answer count mismatch: got {len(answers)}, expected {len(correct_answers)}"
+#             }), 400
+        
+#         logger.info(f"Evaluating {len(answers)} answers for topic '{topic}'")
+        
+#         # Evaluate answers
+#         result = quiz_generator.evaluate_answers(
+#             user_answers=answers,
+#             correct_answers=correct_answers,
+#             topic=topic,
+#             difficulty=difficulty
+#         )
+        
+#         if 'error' in result:
+#             logger.warning(f"Evaluation failed: {result['error']}")
+#             return jsonify(result), 400
+        
+#         logger.info(f"Evaluation complete: score={result['score']:.1f}%")
+        
+#         return jsonify(result), 200
+        
+#     except Exception as e:
+#         logger.error(f"Unexpected error in evaluate_answers: {e}", exc_info=True)
+#         return jsonify({
+#             "error": "An unexpected error occurred",
+#             "details": str(e)
+#         }), 500
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        "status": "healthy",
+        "service": "quiz-generator"
+    }), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
