@@ -14,6 +14,8 @@ import ScrollToTop from './components/ScrollToTop';
 import Tutor from './pages/Tutor';
 import About from './pages/About';
 import ProtectedRoute from './components/ProtectedRoute';
+import { Analytics } from "@vercel/analytics/react"
+import { SpeedInsights } from "@vercel/speed-insights/react"
 
 // Custom hook to clear activeChatId when leaving /tutor
 const ClearActiveChatOnLeave = () => {
