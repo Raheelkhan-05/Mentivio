@@ -299,7 +299,7 @@ function Flashcards({ userId, materialId, useAllMaterials }) {
           setFlashcards(flashcardsData);
           const indices = createSortedIndices(flashcardsData);
           setSortedIndices(indices);
-          setCurrentFlashcardSetId(result.flashcardSetId);
+          setCurrentFlashcardSetId(result._id);
           setCurrentIndex(0);
           setFlipped(false);
           setVisitedCards(new Set([indices[0]]));
@@ -351,6 +351,7 @@ function Flashcards({ userId, materialId, useAllMaterials }) {
   };
 
   const handleMarkMastered = async (mastered) => {
+    
     if (!currentFlashcardSetId) return;
 
     const actualCardIndex = sortedIndices[currentIndex];
@@ -530,7 +531,7 @@ function Flashcards({ userId, materialId, useAllMaterials }) {
 
       {isStudyStage && (
         <>
-          <div className="flex-1 flex flex-col min-w-0 h-[76vh] sm:h-[83vh]">
+          <div className="flex-1 flex flex-col min-w-0 h-[89vh] sm:h-[89vh]">
             <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3.5 shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -642,7 +643,7 @@ function Flashcards({ userId, materialId, useAllMaterials }) {
                   </div>
                 )}
 
-                <div className="perspective-1000">
+<div className="perspective-1000">
                   <div
                     className="relative w-full bg-white rounded-xl shadow-lg border border-gray-200 cursor-pointer transition-all duration-500 transform-style-3d"
                     style={{
@@ -681,13 +682,13 @@ function Flashcards({ userId, materialId, useAllMaterials }) {
                         transform: 'rotateY(180deg)'
                       }}
                     >
-                      <div className="relative h-full text-center">
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 mt-2">
-                          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-500 text-white rounded-full text-xs font-semibold">
+                      <div className="relative h-full flex flex-col items-center text-center">
+                        <div className="block justify-center text-center mt-2">
+                          <div className="inline-flex items-center justify-center gap-1.5 px-3 py-1 bg-green-500 text-white rounded-full text-xs font-semibold">
                             Answer
                           </div>
                         </div>
-                        <div className="flex items-center justify-center h-full px-4">
+                        <div className="flex flex-1 items-center justify-center px-4">
                           <p className="text-lg sm:text-xl font-semibold text-gray-900 leading-relaxed">
                             {currentCard.back}
                           </p>
@@ -705,7 +706,7 @@ function Flashcards({ userId, materialId, useAllMaterials }) {
                   <button
                     onClick={handlePrevious}
                     disabled={currentIndex === 0}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-gray-50 text-gray-700 rounded-lg transition-all font-semibold text-sm border border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 px-2 sm:px-5 py-2.5 bg-white hover:bg-gray-50 text-gray-700 rounded-lg transition-all font-semibold text-sm border border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <ChevronLeft className="w-4 h-4" />
                     <span className="hidden md:inline">Previous</span>
@@ -745,7 +746,7 @@ function Flashcards({ userId, materialId, useAllMaterials }) {
                   {!allCardsVisited ? (
                     <button
                       onClick={handleNext}
-                      className="flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-gray-50 text-gray-700 rounded-lg transition-all font-semibold text-sm border border-gray-300"
+                      className="flex items-center gap-2 px-2 sm:px-5 py-2.5 bg-white hover:bg-gray-50 text-gray-700 rounded-lg transition-all font-semibold text-sm border border-gray-300"
                     >
                       <span className="hidden md:inline">Next</span>
                       <ChevronRight className="w-4 h-4" />

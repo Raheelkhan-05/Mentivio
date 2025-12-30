@@ -378,7 +378,7 @@ function Quiz({ userId, materialId, useAllMaterials, onQuizComplete }) {
       <div className="flex bg-gray-50 relative h-[100vh]">
         <HistorySidePanel />
 
-        <div className="flex-1 flex flex-col min-w-0 h-[76vh] sm:h-[83vh]">
+        <div className="flex-1 flex flex-col min-w-0 h-[89vh] sm:h-[89vh]">
           <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
@@ -494,7 +494,7 @@ function Quiz({ userId, materialId, useAllMaterials, onQuizComplete }) {
       <div className="flex bg-gray-50 relative h-[100vh]">
         <HistorySidePanel />
 
-        <div className="flex-1 flex flex-col min-w-0 h-[76vh] sm:h-[83vh]">
+        <div className="flex-1 flex flex-col min-w-0 h-[89vh] sm:h-[89vh]">
           {/* Header */}
           <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
             <div className="flex items-center justify-between">
@@ -700,7 +700,7 @@ function Quiz({ userId, materialId, useAllMaterials, onQuizComplete }) {
       <div className="flex bg-gray-50 relative h-[100vh]">
         <HistorySidePanel />
 
-        <div className="flex-1 flex flex-col min-w-0 h-[76vh] sm:h-[83vh]">
+        <div className="flex-1 flex flex-col min-w-0 h-[89vh] sm:h-[89vh]">
           {/* Header */}
           <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
             <div className="flex items-center justify-between gap-4">

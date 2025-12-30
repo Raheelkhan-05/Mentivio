@@ -22,6 +22,7 @@ const ClearActiveChatOnLeave = () => {
 
   useEffect(() => {
     if (!location.pathname.startsWith("/tutor")) {
+      localStorage.removeItem("activeTab");
       localStorage.removeItem("activeChatId");
     }
   }, [location.pathname]);

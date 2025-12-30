@@ -409,11 +409,8 @@ function Tutor() {
               {/* Accuracy */}
               <div className="flex items-center justify-between p-3 bg-white/80 backdrop-blur-sm rounded-lg border border-gray-200/50 shadow-sm">
                 <div className="flex items-center gap-2">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center
-                    ${getActiveTabColor() === 'blue' ? 'bg-gradient-to-br from-blue-400 to-blue-600' :
-                      getActiveTabColor() === 'purple' ? 'bg-gradient-to-br from-purple-400 to-purple-600' :
-                        'bg-gradient-to-br from-green-400 to-green-600'
-                    }`}>
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center bg-gradient-to-br from-green-400 to-green-600
+                    `}>
                     <Target className="w-4 h-4 text-white" />
                   </div>
                   <span className="text-gray-700 font-medium text-xs">
