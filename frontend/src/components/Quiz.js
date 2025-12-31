@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Trophy } from 'lucide-react';
 import { generateQuiz, submitQuiz, getQuizHistory, getQuizDetails } from '../services/api';
+import { updateGoalPathProgress, fetchGoalPath } from '../services/api';
 
 function Quiz({ userId, materialId, useAllMaterials, onQuizComplete }) {
   const [stage, setStage] = useState('setup');
@@ -108,6 +109,25 @@ function Quiz({ userId, materialId, useAllMaterials, onQuizComplete }) {
     } finally {
       setLoading(false);
     }
+
+    // Update goal path progress after quiz completion
+    try {
+      
+      // First check if user has a goal path
+      const goalPathResponse = await fetchGoalPath(userId);
+      
+      if (goalPathResponse.success && goalPathResponse.goalPath) {
+        const currentGoal = goalPathResponse.goalPath.goal.original;
+        
+        console.log('Updating goal path progress after quiz completion...');
+        await updateGoalPathProgress(userId, currentGoal);
+        console.log('Goal path updated successfully');
+      }
+    } catch (goalError) {
+      // Silently fail if goal path update fails - don't interrupt quiz flow
+      console.warn('Could not update goal path:', goalError.message);
+    }
+
   };
 
   const handleRestart = () => {

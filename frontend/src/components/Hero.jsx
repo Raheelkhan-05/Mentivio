@@ -8,7 +8,7 @@ const Hero = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   return (
-    <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-gray-50 via-white to-gray-50">
+    <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-gray-50 via-white to-gray-50 mt-4 md:mt-0">
       {/* Background Animation */}
       <div className="absolute inset-0">
         <motion.div

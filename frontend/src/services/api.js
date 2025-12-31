@@ -398,3 +398,90 @@ export const deleteQuiz = async (quizId) => {
     throw error;
   }
 };
+
+/**
+ * Fetch user's goal path
+ */
+export const fetchGoalPath = async (userId) => {
+  try {
+    const response = await fetch(`${API_BASE}/goal/${userId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching goal path:', error);
+    throw error;
+  }
+};
+
+/**
+ * Create or update goal path
+ * @param {string} userId - User ID
+ * @param {string} goal - Goal description
+ * @param {string} startingPosition - Optional starting position
+ * @param {boolean} updateOnly - If true, only updates milestones; if false, regenerates entire path
+ */
+export const createGoalPath = async (userId, goal, startingPosition = null, updateOnly = false) => {
+  try {
+    const response = await fetch(`${API_BASE}/goal/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId,
+        goal,
+        startingPosition,
+        updateOnly
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error creating/updating goal path:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update goal path with latest progress (milestones only)
+ */
+export const updateGoalPathProgress = async (userId, goal) => {
+  try {
+    const response = await fetch(`${API_BASE}/goal/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId,
+        goal,
+        updateOnly: true
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error updating goal path progress:', error);
+    throw error;
+  }
+};

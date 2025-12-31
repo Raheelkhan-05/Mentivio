@@ -11,6 +11,21 @@ import './App.css';
 
 import { motion } from 'framer-motion';
 
+// Animation variants
+const fadeInUp = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -20 }
+};
+
+const staggerContainer = {
+  animate: {
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
 function Tutor() {
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('activeTab') || 'chat';
@@ -144,22 +159,37 @@ function Tutor() {
           {/* CONTENT */}
           <div className="bg-white/90 flex flex-col w-full min-h-screen backdrop-blur">
 
-            <nav className="bg-white/80 ps-20 backdrop-blur-lg border-b border-gray-200/50 shadow-sm px-4 py-3 lg:px-12 sticky top-16 z-10">
-            <button
-    onClick={() => setShowSidebar(!showSidebar)}
-    className={`
-      lg:hidden absolute left-5 top-9 -translate-y-1/2 z-30 p-3
-      bg-white/90 backdrop-blur-lg rounded-2xl shadow-lg hover:shadow-xl 
-      transition-all duration-300 border border-gray-200/50
-      ${getActiveTabColor() === 'blue' ? 'hover:bg-blue-50' :
-        getActiveTabColor() === 'purple' ? 'hover:bg-purple-50' : 'hover:bg-green-50'}
-    `}
-  >
-    <Menu className={`w-5 h-5 ${getActiveTabColor() === 'blue' ? 'text-blue-600' :
-      getActiveTabColor() === 'purple' ? 'text-purple-600' : 'text-green-600'
-    }`} />
-  </button> 
-              <div className="flex gap-2 w-full overflow-x-auto sm:overflow-visible pb-2 sm:pb-0 scrollbar-hide relative">
+            <motion.nav 
+              className="bg-white/80 ps-20 backdrop-blur-lg border-b border-gray-200/50 shadow-sm px-4 py-3 lg:px-12 sticky top-16 z-10"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+            {!showSidebar && (
+              <motion.button
+                onClick={() => setShowSidebar(!showSidebar)}
+                className={`
+                  lg:hidden absolute left-5 top-3 -translate-y-1/2 z-30 p-3
+                  bg-white/90 backdrop-blur-lg rounded-2xl shadow-lg hover:shadow-xl 
+                  transition-all duration-300 border border-gray-200/50
+                  ${getActiveTabColor() === 'blue' ? 'hover:bg-blue-50' :
+                    getActiveTabColor() === 'purple' ? 'hover:bg-purple-50' : 'hover:bg-green-50'}
+                `}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Menu className={`w-5 h-5 ${getActiveTabColor() === 'blue' ? 'text-blue-600' :
+                  getActiveTabColor() === 'purple' ? 'text-purple-600' : 'text-green-600'
+                }`} />
+              </motion.button>
+            )} 
+              <motion.div 
+                className="flex gap-2 w-full overflow-x-auto sm:overflow-visible pb-2 sm:pb-0 scrollbar-hide relative"
+                variants={staggerContainer}
+                initial="initial"
+                animate="animate"
+              >
                 {/* Active tab indicator */}
                 <div
                   className="absolute bottom-0 sm:h-0.5 transition-all duration-300 ease-out z-10"
@@ -180,7 +210,7 @@ function Tutor() {
                   const Icon = tab.icon;
                   const isActive = activeTab === tab.id;
                   return (
-                    <button
+                    <motion.button
                       key={tab.id}
                       onClick={() => handleTabChange(tab.id)}
                       className={`
@@ -197,17 +227,24 @@ function Tutor() {
                           : 'text-gray-600 hover:bg-gray-50/80 hover:text-gray-900'
                         }
                 `}
+                      variants={fadeInUp}
+                      transition={{ duration: 0.4 }}
                     >
                       <Icon className={`w-4 h-4 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-105'}`} />
                       <span className="text-sm font-semibold">{tab.label}</span>
                       {isActive && (
-                        <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
+                        <motion.div 
+                          className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/40 to-transparent pointer-events-none"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.3 }}
+                        />
                       )}
-                    </button>
+                    </motion.button>
                   );
                 })}
-              </div>
-            </nav>
+              </motion.div>
+            </motion.nav>
 <div className="flex flex-1 overflow-y-auto w-full">
   {/* Sidebar */}
   {['chat', 'quiz', 'flashcards', 'upload', 'dashboard'].includes(activeTab) && (
@@ -247,7 +284,7 @@ function Tutor() {
         flex flex-col overflow-hidden shadow-2xl lg:shadow-none
       `}>
         {/* Study Materials Section */}
-        <div className="flex-1 lg:flex-[0.90] overflow-y-auto">
+        <div className="flex-[0.90] overflow-y-auto">
           <div className="p-6 border-b border-gray-200/50 pb-0">
             <div className="flex items-center gap-2 mb-4 ps-12 lg:ps-0">
               <div className={`hidden lg:block w-1 h-6 rounded-full ${getActiveTabColor() === 'blue' ? 'bg-gradient-to-b from-blue-400 to-blue-600' :
@@ -386,11 +423,16 @@ function Tutor() {
           )}
         </div>
         {/* Progress Section */}
-        <div className={`p-4 border-t border-gray-200/50 bg-gradient-to-br
+        <motion.div 
+          className={`p-4 border-t border-gray-200/50 bg-gradient-to-br
           ${getActiveTabColor() === 'blue' ? 'from-blue-50/30 to-transparent' :
             getActiveTabColor() === 'purple' ? 'from-purple-50/30 to-transparent' :
               'from-green-50/30 to-transparent'
-          }`}>
+          }`}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
 
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp className={`w-4 h-4
@@ -404,10 +446,19 @@ function Tutor() {
           </div>
 
           {progress && (
-            <div className="space-y-2">
+            <motion.div 
+              className="space-y-2"
+              variants={staggerContainer}
+              initial="initial"
+              animate="animate"
+            >
 
               {/* Accuracy */}
-              <div className="flex items-center justify-between p-3 bg-white/80 backdrop-blur-sm rounded-lg border border-gray-200/50 shadow-sm">
+              <motion.div 
+                className="flex items-center justify-between p-3 bg-white/80 backdrop-blur-sm rounded-lg border border-gray-200/50 shadow-sm"
+                variants={fadeInUp}
+                transition={{ duration: 0.4 }}
+              >
                 <div className="flex items-center gap-2">
                   <div className={`w-9 h-9 rounded-lg flex items-center justify-center bg-gradient-to-br from-green-400 to-green-600
                     `}>
@@ -420,10 +471,14 @@ function Tutor() {
                 <strong className="text-gray-900 text-base font-bold">
                   {progress.overallAccuracy.toFixed(1)}%
                 </strong>
-              </div>
+              </motion.div>
 
               {/* Quizzes */}
-              <div className="flex items-center justify-between p-3 bg-white/80 backdrop-blur-sm rounded-lg border border-gray-200/50 shadow-sm">
+              <motion.div 
+                className="flex items-center justify-between p-3 bg-white/80 backdrop-blur-sm rounded-lg border border-gray-200/50 shadow-sm"
+                variants={fadeInUp}
+                transition={{ duration: 0.4 }}
+              >
                 <div className="flex items-center gap-2">
                   <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
                     <FileQuestion className="w-4 h-4 text-white" />
@@ -435,10 +490,14 @@ function Tutor() {
                 <strong className="text-gray-900 text-base font-bold">
                   {progress.totalQuizzesTaken}
                 </strong>
-              </div>
+              </motion.div>
 
               {/* Streak */}
-              <div className="flex items-center justify-between p-3 bg-white/80 backdrop-blur-sm rounded-lg border border-gray-200/50 shadow-sm">
+              <motion.div 
+                className="flex items-center justify-between p-3 bg-white/80 backdrop-blur-sm rounded-lg border border-gray-200/50 shadow-sm"
+                variants={fadeInUp}
+                transition={{ duration: 0.4 }}
+              >
                 <div className="flex items-center gap-2">
                   <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
                     <Calendar className="w-4 h-4 text-white" />
@@ -450,11 +509,11 @@ function Tutor() {
                 <strong className="text-gray-900 text-base font-bold">
                   {progress.currentStreak} days 🔥
                 </strong>
-              </div>
+              </motion.div>
 
-            </div>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
       </aside>
       {/* Overlay for mobile */}
       {showSidebar && (
@@ -466,8 +525,12 @@ function Tutor() {
     </>
   )}
               {/* Main Content Area */}
-              <main className={`flex-1 overflow-hidden bg-white/50 backdrop-blur-sm transition-opacity duration-300 ${isTransitioning ? 'opacity-70' : 'opacity-100'
-                }`}>
+              <motion.main 
+                className={`flex-1 overflow-hidden bg-white/50 backdrop-blur-sm transition-opacity duration-300 ${isTransitioning ? 'opacity-0' : 'opacity-100'
+                }`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
                 {activeTab === 'chat' && (
                   <Chat
                     userId={userId}
@@ -499,7 +562,7 @@ function Tutor() {
                 {activeTab === 'dashboard' && (
                   <Dashboard userId={userId} />
                 )}
-              </main>
+              </motion.main>
             </div>
           </div>
         </div>

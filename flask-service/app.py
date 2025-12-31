@@ -1,13 +1,16 @@
+import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from services.document_processor import DocumentProcessor
 from services.qa_service import QAService
 from services.quiz_generator import QuizGenerator
 from services.socratic_tutor import SocraticTutor
+from services.goal_guidance_service import GoalGuidanceService
 import os
 import tempfile
 import base64
-from dotenv import load_dotenv
+from dotenv import load_dotenv # type: ignore
+from langchain_openai import AzureChatOpenAI
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,6 +25,19 @@ doc_processor = DocumentProcessor()
 qa_service = QAService()
 socratic_tutor = SocraticTutor()
 quiz_generator = QuizGenerator()
+
+# Initialize service
+llm = AzureChatOpenAI(
+    azure_endpoint=os.getenv("AZURE_OPENAI_API_BASE"),
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+    azure_deployment=os.getenv("AZURE_OPENAI_API_NAME"),
+    model_name=os.getenv("AZURE_OPENAI_MODEL", "gpt-4o"),
+    temperature=0.3
+)
+
+goal_service = GoalGuidanceService(llm=llm)
+
 
 @app.route('/health', methods=['GET'])
 def health():
@@ -61,8 +77,6 @@ def process_document():
     except Exception as e:
         print("Error in /process-document:", str(e))
         return jsonify({"error": str(e)}), 500
-
-
 
 @app.route('/ask-question', methods=['POST'])
 def ask_question():
@@ -235,6 +249,188 @@ def generate_flashcards():
         return jsonify({"flashcards": flashcards}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/generate', methods=['POST'])
+def generate_learning_path():
+    """
+    Generate or update a personalized learning path
+    
+    Expected JSON:
+    {
+        "goal": "AI Engineer",
+        "starting_position": "Intermediate" (optional),
+        "performance_data": { ... },
+        "update_only": false (optional, default: false),
+        "existing_path": { ... } (required if update_only is true)
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        
+        goal = data.get("goal")
+        if not goal or not goal.strip():
+            return jsonify({"error": "Goal is required"}), 400
+        
+        performance_data = data.get("performance_data", {})
+        update_only = data.get("update_only", False)
+        existing_path = data.get("existing_path")
+        
+        # If update_only is true, just update milestones
+        if update_only:
+            if not existing_path:
+                return jsonify({"error": "existing_path is required when update_only is true"}), 400
+            
+            logger.info(f"[GOAL_ROUTES] Updating milestones only for goal: {goal}")
+            learning_path = goal_service.update_milestones_only(
+                existing_path=existing_path,
+                performance_data=performance_data
+            )
+        else:
+            # Generate complete learning path from scratch
+            starting_position = data.get("starting_position")
+            logger.info(f"[GOAL_ROUTES] Generating complete path for goal: {goal}")
+            
+            learning_path = goal_service.generate_learning_path(
+                goal=goal,
+                performance_data=performance_data,
+                starting_position=starting_position
+            )
+        
+        return jsonify({
+            "success": True,
+            "learning_path": learning_path,
+            "was_update_only": update_only
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"[GOAL_ROUTES] Error generating/updating path: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/update-progress', methods=['POST'])
+def update_progress():
+    """
+    Update milestone progress after quiz completion
+    
+    Expected JSON:
+    {
+        "learning_path": { ... },
+        "topic": "Recursion",
+        "quiz_result": {
+            "accuracy": 80,
+            "score": 80,
+            "attempts": 1
+        }
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        
+        learning_path = data.get("learning_path")
+        topic = data.get("topic")
+        quiz_result = data.get("quiz_result")
+        
+        if not all([learning_path, topic, quiz_result]):
+            return jsonify({"error": "Missing required fields"}), 400
+        
+        logger.info(f"[GOAL_ROUTES] Updating progress for topic: {topic}")
+        
+        # Update progress
+        updated_path = goal_service.update_milestone_progress(
+            learning_path=learning_path,
+            topic=topic,
+            quiz_result=quiz_result
+        )
+        
+        return jsonify({
+            "success": True,
+            "learning_path": updated_path
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"[GOAL_ROUTES] Error updating progress: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/recommendations/<user_id>', methods=['GET'])
+def get_recommendations(user_id):
+    """
+    Get personalized recommendations based on current progress
+    
+    Query params:
+    - learning_path (required): JSON string of learning path
+    - performance_data (required): JSON string of performance data
+    """
+    try:
+        import json
+        
+        learning_path_str = request.args.get('learning_path')
+        performance_data_str = request.args.get('performance_data')
+        
+        if not learning_path_str or not performance_data_str:
+            return jsonify({"error": "Missing query parameters"}), 400
+        
+        learning_path = json.loads(learning_path_str)
+        performance_data = json.loads(performance_data_str)
+        
+        milestones = learning_path.get("milestones", [])
+        
+        # Generate recommendations
+        recommendations = goal_service._generate_recommendations(
+            milestones=milestones,
+            performance_data=performance_data
+        )
+        
+        return jsonify({
+            "success": True,
+            "recommendations": recommendations
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"[GOAL_ROUTES] Error getting recommendations: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/milestone-status', methods=['POST'])
+def check_milestone_status():
+    """
+    Check status of a specific milestone
+    
+    Expected JSON:
+    {
+        "learning_path": { ... },
+        "milestone_id": "milestone_1"
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        learning_path = data.get("learning_path")
+        milestone_id = data.get("milestone_id")
+        
+        if not learning_path or not milestone_id:
+            return jsonify({"error": "Missing required fields"}), 400
+        
+        milestones = learning_path.get("milestones", [])
+        milestone = next((m for m in milestones if m["id"] == milestone_id), None)
+        
+        if not milestone:
+            return jsonify({"error": "Milestone not found"}), 404
+        
+        return jsonify({
+            "success": True,
+            "milestone": milestone
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"[GOAL_ROUTES] Error checking milestone: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

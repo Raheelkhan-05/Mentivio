@@ -8,6 +8,8 @@ require('dotenv').config();
 const uploadRoutes = require('./routes/upload');
 const tutorRoutes = require('./routes/tutor');
 const progressRoutes = require('./routes/progress');
+const goalRoutes = require('./routes/goal');
+const goalGuidanceRoutes = require('./routes/goalGuidance.js');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -29,6 +31,8 @@ mongoose.connect(process.env.MONGODB_URI , {
 app.use('/api/upload', uploadRoutes);
 app.use('/api/tutor', tutorRoutes);
 app.use('/api/progress', progressRoutes);
+app.use('/api/goal', goalRoutes);
+// app.use('/api/goal-guidance', goalGuidanceRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

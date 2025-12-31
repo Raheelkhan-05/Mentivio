@@ -202,7 +202,7 @@ const handleForgotPassword = async (e) => {
   };
 
   return (
-    <div className="min-h-screen flex items-start mt-12 justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 sm:p-6 relative overflow-hidden">
+    <div className="min-h-screen flex items-start mt-16 md:mt-12 justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 sm:p-6 relative overflow-hidden">
       {/* Animated floating shapes */}
       <motion.div
         className="absolute top-20 left-10 w-64 h-64 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-30"
