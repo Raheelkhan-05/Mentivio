@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
-import { Search, Clock, ChevronLeft, ChevronRight, RotateCw, Check, X, Home, Trophy } from 'lucide-react';
+import { Search, Clock, ChevronLeft, ChevronRight, RotateCw, Check, Trophy } from 'lucide-react';
 import { AlertTriangle } from 'lucide-react';
 
 import {

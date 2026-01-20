@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronRight, Target, Trophy, Info, Lock, BookOpen, TrendingUp, CheckCircle2, Circle, Loader2, Sparkles, Rocket, Award, Zap } from 'lucide-react';
 import { fetchGoalPath, createGoalPath } from '../services/api';
 import { useAuth } from '../components/AuthContext';
 
 const GoalPathDashboard = () => {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const userId = user?.userId || null;
   const [goalPath, setGoalPath] = useState(null);
   const [loads, setLoads] = useState(false);
@@ -14,12 +14,11 @@ const GoalPathDashboard = () => {
   
   // Form states
   const [goalInput, setGoalInput] = useState('');
-  const [startingPosition, setStartingPosition] = useState('Complete Beginner');
+  const [startingPosition] = useState('Complete Beginner');
   
   // Expandable states
   const [expandedMilestones, setExpandedMilestones] = useState({});
   const [expandedSkills, setExpandedSkills] = useState({});
-  const [activeTab, setActiveTab] = useState('overview');
 
   // Ref for scrolling to first incomplete skill
   const firstIncompleteSkillRef = useRef(null);

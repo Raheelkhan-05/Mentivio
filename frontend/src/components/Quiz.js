@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Trophy } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { generateQuiz, submitQuiz, getQuizHistory, getQuizDetails } from '../services/api';
 import { updateGoalPathProgress, fetchGoalPath } from '../services/api';
 

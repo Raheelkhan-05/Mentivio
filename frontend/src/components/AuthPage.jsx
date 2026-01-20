@@ -108,6 +108,8 @@ const AuthPage = () => {
         email: formData.email,
         name: formData.name,
         userId: userId,
+        isAdmin: false,
+        isSuspended: false,
         createdAt: new Date(),
       });
 

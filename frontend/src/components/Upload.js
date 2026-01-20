@@ -90,7 +90,6 @@ function Upload({ userId, onUploadSuccess }) {
     setTitle('');
   };
 
-  const isError = message.startsWith('error:');
   const isSuccess = message.startsWith('success:');
   const displayMessage = message.replace(/^(error:|success:)/, '');
 

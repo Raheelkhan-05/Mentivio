@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, TrendingUp, Calendar, Target, MessageSquare, FileQuestion, CreditCard, BarChart3, Menu, X, Upload, ChevronRight } from 'lucide-react';
+import { Search, TrendingUp, Calendar, Target, MessageSquare, FileQuestion, CreditCard, BarChart3, Menu, X, Upload } from 'lucide-react';
 import UploadComponent from '../components/Upload';
 import Chat from '../components/Chat';
 import Quiz from '../components/Quiz';

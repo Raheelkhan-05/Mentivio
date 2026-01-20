@@ -1020,3 +1020,20 @@ body {
   background-size: 200% 200%;
   animation: glow-move 7s ease-in-out infinite;
 }
+
+/* Chrome, Edge, Safari */
+.whatsapp-scroll::-webkit-scrollbar {
+ width: 5px;
+}
+.whatsapp-scroll::-webkit-scrollbar-thumb {
+ background-color: rgba(0, 0, 0, 0.25);
+ border-radius: 9999px;
+}
+.whatsapp-scroll::-webkit-scrollbar-track {
+ background: transparent;
+}
+/* Firefox */
+.whatsapp-scroll {
+ scrollbar-width: thin;
+ scrollbar-color: rgba(0, 0, 0, 0.25) transparent;
+}

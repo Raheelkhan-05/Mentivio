@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, Target, TrendingUp, Flame, Award, BookOpen, Brain, Zap, ChevronRight, Info, Trophy, Sparkles } from 'lucide-react';
+import { BarChart3, Target, Flame, BookOpen, Zap, Info, Trophy, Sparkles } from 'lucide-react';
 import { getDashboardStats } from '../services/api';
 
 function Dashboard({ userId }) {

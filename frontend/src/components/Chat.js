@@ -1,9 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Clock, MessageSquare, X, Edit2, Trash2, Send, Sparkles, Brain } from 'lucide-react';
+import { Clock, MessageSquare, Edit2, Trash2, Send, Sparkles, Brain } from 'lucide-react';
 import { askQuestion, askSocratic } from "../services/api";
-import { useAuth } from '../components/AuthContext';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
+// import 'highlight.js/styles/github.css';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:4000/api';
+
+
 
 function Chat({ userId, materialId, useAllMaterials }) {
   const messagesContainerRef = useRef(null);
@@ -15,8 +20,6 @@ function Chat({ userId, materialId, useAllMaterials }) {
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState("normal");
   const [showHistory, setShowHistory] = useState(false);
-  const { user, loads } = useAuth();
-  const curr_user = user?.userId || null;
 
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -101,6 +104,105 @@ function Chat({ userId, materialId, useAllMaterials }) {
 
     loadChatList();
   };
+
+const MarkdownMessage = ({ content, isUserMessage }) => {
+  return (
+    <div className="prose prose-sm max-w-none">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeHighlight]}
+        components={{
+          // Paragraphs
+          p: ({ children }) => (
+            <p className="mb-2 last:mb-0 leading-relaxed whitespace-pre-wrap break-words">
+              {children}
+            </p>
+          ),
+          // Headers
+          h1: ({ children }) => (
+            <h1 className="text-lg font-bold mt-3 mb-2 first:mt-0">{children}</h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="text-base font-bold mt-3 mb-2 first:mt-0">{children}</h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="text-sm font-bold mt-2 mb-1 first:mt-0">{children}</h3>
+          ),
+          // Bold and Italic
+          strong: ({ children }) => (
+            <strong className="font-semibold">{children}</strong>
+          ),
+          em: ({ children }) => (
+            <em className="italic">{children}</em>
+          ),
+          // Lists
+          ul: ({ children }) => (
+            <ul className="list-disc list-inside my-2 space-y-1">{children}</ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="list-decimal list-inside my-2 space-y-1">{children}</ol>
+          ),
+          li: ({ children }) => (
+            <li className="leading-relaxed">{children}</li>
+          ),
+    
+       // Tables
+          table: ({ children }) => (
+            <div className="overflow-x-auto my-3">
+              <table className="min-w-full divide-y divide-gray-300 border border-gray-300 text-xs">
+                {children}
+              </table>
+            </div>
+          ),
+          thead: ({ children }) => (
+            <thead className={`${isUserMessage ? 'bg-blue-600' : 'bg-gray-100'}`}>
+              {children}
+            </thead>
+          ),
+          tbody: ({ children }) => (
+            <tbody className="divide-y divide-gray-200">{children}</tbody>
+          ),
+          tr: ({ children }) => (
+            <tr>{children}</tr>
+          ),
+          th: ({ children }) => (
+            <th className="px-3 py-2 text-left font-semibold border-r border-gray-300 last:border-r-0">
+              {children}
+            </th>
+          ),
+          td: ({ children }) => (
+            <td className="px-3 py-2 border-r border-gray-300 last:border-r-0">
+              {children}
+            </td>
+          ),
+          // Horizontal Rule
+          hr: () => (
+            <hr className={`my-3 border-t ${isUserMessage ? 'border-blue-400' : 'border-gray-300'}`} />
+          ),
+          // Blockquote
+          blockquote: ({ children }) => (
+            <blockquote className={`border-l-4 ${isUserMessage ? 'border-blue-400' : 'border-gray-400'} pl-3 my-2 italic`}>
+              {children}
+            </blockquote>
+          ),
+          // Links
+          a: ({ children, href }) => (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:no-underline"
+            >
+              {children}
+            </a>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -407,7 +509,11 @@ function Chat({ userId, materialId, useAllMaterials }) {
                 }
               `}
             >
-              <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
+              {/* <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p> */}
+              <MarkdownMessage 
+                content={msg.content} 
+                isUserMessage={msg.senderId === userId}
+              />
               {msg.hint && (
                 <div className="mt-3 pt-3 border-t border-gray-200">
                   <div className="flex items-start gap-2">
@@ -432,9 +538,9 @@ function Chat({ userId, materialId, useAllMaterials }) {
           <div className="flex justify-start animate-fadeIn">
             <div className="bg-white rounded-2xl px-5 py-4 shadow-sm border border-gray-200">
               <div className="flex gap-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2 h-2 bg-gray-700 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           </div>
