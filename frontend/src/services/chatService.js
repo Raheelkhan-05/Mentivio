@@ -9,7 +9,8 @@ import {
   getDocs,
   doc,
   serverTimestamp,
-  updateDoc
+  updateDoc,
+  arrayUnion, getDoc
 } from 'firebase/firestore';
 import { ref, set, onValue, onDisconnect } from 'firebase/database';
 import { db, realtimeDb } from './firebase';
@@ -22,6 +23,87 @@ export const deleteMessage = async (messageId) => {
     console.error("Error deleting message:", error);
     throw error;
   }
+};
+
+
+export const deleteMessageForMe = async (messageId, userId, conversationId) => {
+  console.log("=== DELETE FOR ME DEBUG ===");
+  console.log("messageId:", messageId);
+  console.log("userId:", userId);
+  console.log("conversationId:", conversationId);
+  
+  if (!userId) {
+    console.error("❌ User ID is missing!");
+    throw new Error("User ID is required");
+  }
+  
+  try {
+    const messageRef = doc(db, "messages", messageId);
+    
+    // Check if message exists
+    const messageDoc = await getDoc(messageRef);
+    console.log("Message exists:", messageDoc.exists());
+    console.log("Current message data:", messageDoc.data());
+    
+    // Update the message
+    await updateDoc(messageRef, {
+      deletedFor: arrayUnion(userId)
+    });
+    
+    console.log("✅ Message updated successfully");
+    
+    // Verify the update
+    const updatedDoc = await getDoc(messageRef);
+    console.log("Updated message data:", updatedDoc.data());
+    console.log("deletedFor array:", updatedDoc.data()?.deletedFor);
+    
+    // Update conversation's last message deleted status
+    if (conversationId) {
+      const conversationRef = doc(db, "conversations", conversationId);
+      const conversationDoc = await getDoc(conversationRef);
+      
+      console.log("Conversation exists:", conversationDoc.exists());
+      console.log("Current conversation data:", conversationDoc.data());
+      
+      if (conversationDoc.exists()) {
+        await updateDoc(conversationRef, {
+          lastMessageDeletedFor: arrayUnion(userId)
+        });
+        
+        console.log("✅ Conversation updated successfully");
+        
+        // Verify conversation update
+        const updatedConvo = await getDoc(conversationRef);
+        console.log("Updated conversation data:", updatedConvo.data());
+      }
+    }
+    
+    console.log("=== DELETE FOR ME COMPLETE ===");
+  } catch (error) {
+    console.error("❌ Error in deleteMessageForMe:", error);
+    console.error("Error code:", error.code);
+    console.error("Error message:", error.message);
+    throw error;
+  }
+};
+
+// Update deleteMessageForEveryone
+export const deleteMessageForEveryone = async (messageId, senderName, conversationId) => {
+  const messageRef = doc(db, "messages", messageId);
+  
+  await updateDoc(messageRef, {
+    deletedForEveryone: true,
+    deletedBy: senderName,
+    message: "This message has been deleted"
+  });
+
+  // Update conversation's last message deleted status
+  const conversationRef = doc(db, "conversations", conversationId);
+  
+  await updateDoc(conversationRef, {
+    lastMessageDeleted: true,
+    lastMessage: "This message was deleted"
+  });
 };
 
 // Get or create conversation between two users
@@ -80,7 +162,9 @@ export const sendMessage = async (conversationId, senderId, message) => {
     const conversationRef = doc(db, 'conversations', conversationId);
     await updateDoc(conversationRef, {
       lastMessage: message,
-      lastMessageAt: serverTimestamp()
+      lastMessageAt: serverTimestamp(),
+      lastMessageDeleted: false,  
+      lastMessageDeletedFor: []   
     });
 
     return { success: true };
@@ -92,18 +176,28 @@ export const sendMessage = async (conversationId, senderId, message) => {
 
 // Subscribe to messages in a conversation
 export const subscribeToMessages = (conversationId, callback) => {
-  const messagesRef = collection(db, 'messages');
+  console.log("Subscribing to messages for conversation:", conversationId);
+  
+  const messagesRef = collection(db, "messages");
   const q = query(
     messagesRef,
-    where('conversationId', '==', conversationId),
-    orderBy('createdAt', 'asc')
+    where("conversationId", "==", conversationId),
+    orderBy("createdAt", "asc")
   );
 
   return onSnapshot(q, (snapshot) => {
-    const messages = [];
-    snapshot.forEach((doc) => {
-      messages.push({ id: doc.id, ...doc.data() });
-    });
+    const messages = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    
+    console.log("Messages snapshot received:", messages.length);
+    console.log("Raw messages:", messages.map(m => ({
+      id: m.id,
+      deletedFor: m.deletedFor,
+      message: m.message
+    })));
+    
     callback(messages);
   });
 };

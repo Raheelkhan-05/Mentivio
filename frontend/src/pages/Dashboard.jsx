@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../components/AuthContext";
@@ -11,7 +9,8 @@ import {
   setTypingStatus,
   subscribeToTyping,
   subscribeToUserStatus,
-  deleteMessage
+  deleteMessageForMe,
+  deleteMessageForEveryone,
 } from "../services/chatService";
 import { getAllUsers, getUserById } from "../services/userService";
 import {
@@ -40,22 +39,6 @@ const SearchIcon = () => (
   </svg>
 );
 
-const TrashIcon = () => (
-  <svg
-    className="w-4 h-4"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-    strokeWidth="2"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-    />
-  </svg>
-);
-
 const SendIcon = () => (
   <svg
     className="w-5 h-5"
@@ -68,6 +51,22 @@ const SendIcon = () => (
       strokeLinecap="round"
       strokeLinejoin="round"
       d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+    />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+    strokeWidth="2"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
     />
   </svg>
 );
@@ -87,22 +86,6 @@ const MenuIcon = () => (
     />
   </svg>
 );
-
-// const XIcon = () => (
-//   <svg
-//     className="w-6 h-6"
-//     fill="none"
-//     stroke="currentColor"
-//     viewBox="0 0 24 24"
-//     strokeWidth="2"
-//   >
-//     <path
-//       strokeLinecap="round"
-//       strokeLinejoin="round"
-//       d="M6 18L18 6M6 6l12 12"
-//     />
-//   </svg>
-// );
 
 const MessageSquareIcon = () => (
   <svg
@@ -240,6 +223,29 @@ const getDateLabel = (date) => {
   });
 };
 
+const DeleteMenu = ({ onDeleteForMe, onDeleteForEveryone, onClose, isOwnMessage, position = 'right' }) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.95 }}
+    animate={{ opacity: 1, scale: 1 }}
+    exit={{ opacity: 0, scale: 0.95 }}
+    className={`absolute ${position === 'right' ? 'right-0' : 'left-0'} mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50`}
+  >
+    <button
+      onClick={onDeleteForMe}
+      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+    >
+      Delete for me
+    </button>
+    {isOwnMessage && (
+      <button
+        onClick={onDeleteForEveryone}
+        className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-gray-100"
+      >
+        Delete for everyone
+      </button>
+    )}
+  </motion.div>
+);
 
 const Dashboard = () => {
   const { user, loading } = useAuth();
@@ -255,13 +261,17 @@ const Dashboard = () => {
   const [onlineStatus, setOnlineStatus] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
+  const [showSearch, setShowSearch] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState({});
+  const [showDeleteMenu, setShowDeleteMenu] = useState(null); // stores message id
+  const deleteMenuRef = useRef(null);
 
   const [isDesktop, setIsDesktop] = useState(
     window.matchMedia("(min-width: 1024px)").matches
   );
 
+  const messageRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
@@ -332,10 +342,26 @@ const Dashboard = () => {
 
           const snapshot = await getDocs(q);
 
+           // GET LAST MESSAGE AND CHECK IF DELETED
+        let displayLastMessage = convo.lastMessage || "" ;
+        console.log(convo.lastMessage);
+        
+        if (convo.lastMessage) {
+          // Check if last message was deleted for everyone
+          if (convo.lastMessageDeleted === true) {
+            displayLastMessage = "This message was deleted";
+          }
+          // Check if last message was deleted for this user
+          else if (convo.lastMessageDeletedFor?.includes(userId)) {
+            displayLastMessage = "";
+          }
+        }
+
           return {
             ...convo,
             otherUsers,
             unreadCount: snapshot.size, // IMPORTANT
+            displayLastMessage
           };
         })
       );
@@ -375,15 +401,41 @@ const Dashboard = () => {
   }, [userId]);
 
   // Subscribe to messages when conversation is selected
+  // useEffect(() => {
+  //   if (!selectedConversation) return;
+
+  //   const unsubscribe = subscribeToMessages(selectedConversation, (msgs) => {
+  //     setMessages(msgs);
+  //   });
+
+  //   return () => unsubscribe();
+  // }, [selectedConversation]);
+
   useEffect(() => {
-    if (!selectedConversation) return;
+  if (!selectedConversation) return;
 
-    const unsubscribe = subscribeToMessages(selectedConversation, (msgs) => {
-      setMessages(msgs);
+  const unsubscribe = subscribeToMessages(selectedConversation, (msgs) => {
+    console.log("=== MESSAGES RECEIVED ===");
+    console.log("Total messages:", msgs.length);
+    console.log("Current userId:", userId);
+    
+    // Filter and log
+    const filtered = msgs.filter(msg => {
+      const isDeletedForMe = msg.deletedFor?.includes(userId);
+      console.log(`Message ${msg.id}:`, {
+        deletedFor: msg.deletedFor,
+        isDeletedForMe,
+        shouldShow: !isDeletedForMe
+      });
+      return !isDeletedForMe;
     });
+    
+    console.log("Filtered messages:", filtered.length);
+    setMessages(filtered);
+  });
 
-    return () => unsubscribe();
-  }, [selectedConversation]);
+  return () => unsubscribe();
+}, [selectedConversation, userId]);
 
   // Mark messages as read
 
@@ -450,6 +502,53 @@ const Dashboard = () => {
     setSearchResults(results);
   }, [searchQuery, users]);
 
+const handleDeleteForMe = async (messageId) => {
+  console.log("=== HANDLE DELETE FOR ME ===");
+  console.log("messageId:", messageId);
+  console.log("userId:", userId);
+  console.log("selectedConversation:", selectedConversation);
+  
+  if (!userId) {
+    console.error("❌ User ID not available");
+    return;
+  }
+  
+  if (!selectedConversation) {
+    console.error("❌ No conversation selected");
+    return;
+  }
+  
+  try {
+    await deleteMessageForMe(messageId, userId, selectedConversation);
+    console.log("✅ Delete completed successfully");
+    setShowDeleteMenu(null);
+  } catch (error) {
+    console.error("❌ Error deleting message:", error);
+    console.error("Full error object:", JSON.stringify(error, null, 2));
+  }
+};
+
+const handleDeleteForEveryone = async (messageId) => {
+  try {
+    await deleteMessageForEveryone(messageId, user?.name, selectedConversation);
+    setShowDeleteMenu(null);
+  } catch (error) {
+    console.error("Error deleting message:", error);
+  }
+};
+
+// Close delete menu when clicking outside
+useEffect(() => {
+  const handleClickOutside = (event) => {
+    if (deleteMenuRef.current && !deleteMenuRef.current.contains(event.target)) {
+      setShowDeleteMenu(null);
+    }
+  };
+
+  document.addEventListener('mousedown', handleClickOutside);
+  return () => document.removeEventListener('mousedown', handleClickOutside);
+}, []);
+
   const handleUserClick = async (otherUser) => {
     const conversationId = await getOrCreateConversation(
       userId,
@@ -461,22 +560,10 @@ const Dashboard = () => {
       name: otherUser.name || otherUser.fullName,
       email: otherUser.email,
     });
+    setShowSearch(false);
     setSearchQuery("");
     setShowMobileMenu(false);
   };
-
-  const handleDeleteMessage = async (messageId) => {
-  if (!window.confirm("Are you sure you want to delete this message?")) {
-    return;
-  }
-  
-  try {
-    await deleteMessage(messageId);
-  } catch (error) {
-    console.error("Error deleting message:", error);
-    alert("Failed to delete message");
-  }
-};
 
   const handleSendMessage = async () => {
     if (!message.trim() || !selectedConversation || !userId) return;
@@ -569,6 +656,33 @@ const Dashboard = () => {
         >
           {/* <div className="w-screen max-w-7xl mx-auto h-[93vh] max-h-screen mt-16 flex bg-white relative overflow-hidden pb-5"> */}
           <div className="relative flex w-full h-[93vh] bg-white overflow-hidden">
+
+          {!isDesktop && !showMobileMenu && (
+    <motion.button
+      whileTap={{ scale: 0.95 }}
+      onClick={() => setShowMobileMenu(true)}
+      className="
+        fixed
+        top-20
+        left-4
+        z-50
+        p-2
+        bg-white
+        border
+        border-gray-200
+        rounded-lg
+        shadow-md
+        text-gray-700
+        lg:hidden
+      "
+    >
+      <MenuIcon />
+    </motion.button>
+  )}
+
+
+
+
             {/* Animated background gradients and shapes */}
             <div
               className="absolute top-0 left-0 w-[500px] h-[500px] bg-gradient-to-br from-blue-200/20 via-purple-200/15 to-transparent rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none animate-pulse"
@@ -770,7 +884,7 @@ const Dashboard = () => {
                                 {convo.otherUsers?.fullName}
                               </h4> */}
                               <p className="text-xs text-gray-500 truncate">
-                                {convo.lastMessage || "No messages yet"}
+                                {convo.displayLastMessage || "No messages yet"}
                               </p>
                             </div>
                           </div>
@@ -880,59 +994,118 @@ const Dashboard = () => {
 
                                 {/* MESSAGE BUBBLE (UNCHANGED) */}
                                 <motion.div
-                                  initial={{ opacity: 0, y: 20 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ duration: 0.3 }}
-                                  className={`flex group ${
-                                    msg.senderId === userId ? "justify-end" : "justify-start"
-                                  }`}
-                                >
-                                  <div className="max-w-[70%] md:max-w-md relative">
-                                    <div
-                                      className={`px-3 py-2 rounded-xl ${
-                                        msg.senderId === userId
-                                          ? "bg-blue-500 text-white rounded-br-md"
-                                          : "bg-gray-100 text-gray-900 rounded-bl-md border border-gray-200"
-                                      }`}
-                                    >
-                                      <p className="text-sm leading-relaxed">{msg.message}</p>
-                                      
-                                      {/* Delete button - only show for own messages */}
-                                      {msg.senderId === userId && (
-                                        <button
-                                          onClick={() => handleDeleteMessage(msg.id)}
-                                          className="absolute -right-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-full hover:bg-red-100 text-red-500"
-                                          title="Delete message"
-                                        >
-                                          <TrashIcon />
-                                        </button>
-                                      )}
-                                    </div>
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.3 }}
+  className={`flex items-center ${
+    msg.senderId === userId ? "justify-end" : "justify-start"
+  } group`}
+>
+   {/* Trash icon for YOUR messages (left side) */}
+  {msg.senderId === userId && !msg.deletedForEveryone && (
+    <motion.button
+      initial={{ }}
+      whileHover={{ scale: 1.1}}
+      onClick={() => setShowDeleteMenu(showDeleteMenu === msg.id ? null : msg.id)}
+      className="opacity-0 text-red-500 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-gray-100 rounded-full ml-2 flex-shrink-0"
+    >
+      <TrashIcon />
+    </motion.button>
+  )}
 
-                                    <div
-                                      className={`flex items-center mt-1 space-x-2 px-1 ${
-                                        msg.senderId === userId
-                                          ? "justify-end"
-                                          : "justify-start"
-                                      }`}
-                                    >
-                                      <span className="text-xs text-gray-400">
-                                        {msgDate
-                                          ? msgDate.toLocaleTimeString([], {
-                                              hour: "2-digit",
-                                              minute: "2-digit",
-                                            })
-                                          : ""}
-                                      </span>
 
-                                      {msg.senderId === userId && (
-                                        <span className="flex items-center">
-                                          <DoubleTick read={msg.read} />
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </motion.div>
+  {/* Message bubble */}
+  <div className="max-w-[70%] md:max-w-md relative">
+    {/* Delete menu */}
+    <AnimatePresence>
+      {showDeleteMenu === msg.id && (
+        <div 
+          ref={deleteMenuRef} 
+          className={`absolute ${
+            msg.senderId === userId ? 'right-25 -top-10' : 'left-16 -top-2'
+          } z-50`}
+        >
+          <DeleteMenu
+            onDeleteForMe={() => handleDeleteForMe(msg.id)}
+            onDeleteForEveryone={() => handleDeleteForEveryone(msg.id)}
+            onClose={() => setShowDeleteMenu(null)}
+            isOwnMessage={msg.senderId === userId}
+            position={msg.senderId === userId ? 'right' : 'left'}
+          />
+        </div>
+      )}
+    </AnimatePresence>
+
+    <div
+      className={`px-3 py-2 rounded-xl ${
+        msg.senderId === userId
+          ? "bg-blue-500 text-white rounded-br-md"
+          : "bg-gray-100 text-gray-900 rounded-bl-md border border-gray-200"
+      } ${msg.deletedForEveryone ? 'italic opacity-70' : ''}`}
+    >
+      <p className="text-sm leading-relaxed">
+        {msg.deletedForEveryone 
+          ? `This message was deleted by ${msg.deletedBy}`
+          : msg.message
+        }
+      </p>
+    </div>
+
+    {/* Timestamp and read receipt */}
+    <div
+      className={`flex items-center mt-1 space-x-2 px-1 ${
+        msg.senderId === userId
+          ? "justify-end"
+          : "justify-start"
+      }`}
+    >
+      <span className="text-xs text-gray-400">
+        {msgDate
+          ? msgDate.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : ""}
+      </span>
+
+      {msg.senderId === userId && (
+        <span className="flex items-center">
+          <DoubleTick read={msg.read} />
+        </span>
+      )}
+    </div>
+  </div>
+
+ 
+  {/* Trash icon for OTHER user's messages (right side) */}
+{msg.senderId !== userId && (
+  <motion.button
+    initial={{ }}
+    whileHover={{ scale: 1.1 }}
+    onClick={() =>
+      setShowDeleteMenu(showDeleteMenu === msg.id ? null : msg.id)
+    }
+    className="
+      opacity-0
+      group-hover:opacity-100
+      transition-opacity
+      
+      
+      text-red-500
+      p-1.5
+      hover:bg-gray-100
+      rounded-full
+      mr-2
+      flex-shrink-0
+      pointer-events-none
+      group-hover:pointer-events-auto
+    "
+  >
+    <TrashIcon />
+  </motion.button>
+
+  )}
+</motion.div>
                               </React.Fragment>
                             );
                           })}
@@ -1002,7 +1175,7 @@ const Dashboard = () => {
                   <motion.div
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    className="bg-white/80 backdrop-blur-md border-t border-gray-200 px-6 py-4"
+                    className="bg-white/80 backdrop-blur-md border-t border-gray-200 px-6 py-6"
                   >
                     <div className="flex items-center space-x-3">
                       <input
