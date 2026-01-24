@@ -5,13 +5,15 @@ import { useAuth } from "./AuthContext";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../services/firebase";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { generateUniqueUserId } from "./generateUserId"; 
+import { toast } from "react-toastify";
 
 
 const AuthPage = () => {
   const [isLoginView, setIsLoginView] = useState(true);
   const [isForgotPassword, setIsForgotPassword] = useState(false); 
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -21,7 +23,7 @@ const AuthPage = () => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false); 
   const [successMessage, setSuccessMessage] = useState("");
-  const { login } = useAuth();
+  const { login, suspendedError, setSuspendedError } = useAuth();
   const navigate = useNavigate();
 
   const handleInputChange = (e) => {
@@ -81,6 +83,29 @@ const AuthPage = () => {
     if (isLoginView) {
       // ---------------- LOGIN ----------------
       const userCred = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      
+       // Fetch user data from Firestore
+      const userDocRef = doc(db, 'users', userCred.user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (!userDocSnap.exists()) {
+        toast.error('User data not found');
+        await auth.signOut();
+        setLoading(false);
+        return;
+      }
+
+      const userFirestoreData = userDocSnap.data();
+
+      // CHECK IF USER IS SUSPENDED
+      if (userFirestoreData.isSuspended === true) {
+        setSuspendedError('Your account has been suspended due to inappropriate usage of this app. Please contact support for assistance.');
+        await auth.signOut();
+        setLoading(false);
+        toast.error('Your account has been suspended due to inappropriate usage of this app. Please contact support for assistance.');
+        navigate("/");
+        return;
+      }
 
       const userData = {
         id: userCred.user.uid,

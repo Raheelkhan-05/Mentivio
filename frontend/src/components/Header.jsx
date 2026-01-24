@@ -18,13 +18,15 @@ const Header = () => {
     { name: "About", href: "/about" },
   ];
 
-  const privateNavItems = [
-    { name: "Home", path: "/" },
-    { name: "AI Tutor", path: "/tutor" },
-    { name: "Goal Guidance", path: "/goals" },
-    { name: "Chats", path: "/chats" },
-    { name: "About", path: "/about" },
-  ];
+// Use useMemo to recalculate when user.isAdmin changes
+const privateNavItems = React.useMemo(() => [
+  ...(user?.isAdmin ? [{ name: "Admin", path: "/admin" }] : []),
+  { name: "Home", path: "/" },
+  { name: "AI Tutor", path: "/tutor" },
+  { name: "Goal Guidance", path: "/goals" },
+  { name: "Chats", path: "/chats" },
+  { name: "About", path: "/about" },
+], [user?.isAdmin]);
 
   const navItems = user ? privateNavItems : publicNavItems;
 

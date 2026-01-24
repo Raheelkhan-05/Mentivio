@@ -17,6 +17,7 @@ export const AuthProvider = ({ children }) => {
   });
 
   const [loading, setLoading] = useState(true);
+  const [suspendedError, setSuspendedError] = useState(null);
 
   // SAVE USER INTO STATE + LOCALSTORAGE
   const saveUserSession = async (firebaseUser) => {
@@ -33,6 +34,16 @@ export const AuthProvider = ({ children }) => {
 
     const profile = docSnap.exists() ? docSnap.data() : {};
 
+    // CHECK IF USER IS SUSPENDED
+    if (profile.isSuspended === true) {
+      setSuspendedError("Your account has been suspended due to inappropriate usage of this app. Please contact support for assistance.");
+      await signOut(auth);
+      setUser(null);
+      localStorage.removeItem("activeChatId");
+      localStorage.removeItem("user");
+      return;
+    }
+
     const token = await getIdToken(firebaseUser, true);
 
     const userData = {
@@ -40,11 +51,13 @@ export const AuthProvider = ({ children }) => {
       email: firebaseUser.email,
       name: profile.name || "",
       userId: profile.userId || "",
+      isAdmin: profile.isAdmin || false,
       token,
     };
 
     setUser(userData);
     localStorage.setItem("user", JSON.stringify(userData));
+    setSuspendedError(null);
   };
 
   // LOGIN is now handled from AuthPage, but still exposed for flexibility
@@ -59,110 +72,69 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     localStorage.removeItem("activeChatId");
     localStorage.removeItem("user");
+    setSuspendedError(null);
   };
 
   // AUTO LOGIN ON REFRESH (Firebase listener)
-  // useEffect(() => {
-  //   const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-  //     if (firebaseUser) {
-  //       await saveUserSession(firebaseUser);
-  //     } else {
-  //       setUser(null);
-  //       localStorage.removeItem("activeChatId");
-  //       localStorage.removeItem("user");
-  //     }
-  //     setLoading(false);
-  //   });
-
-  //   return () => unsubscribe();
-  // }, []);
-
-  // useEffect(() => {
-  //   const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-  //     if (firebaseUser) {
-  //       try {
-  //         const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-  //         const userData = userDoc.data();
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          // 1. Get the document from Firestore using the random Auth UID
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           
-  //         const userInfo = {
-  //           id: firebaseUser.uid,
-  //           userId: firebaseUser.userId,
-  //           email: firebaseUser.email,
-  //           fullName: userData?.fullName || ''
-  //         };
-          
-  //         setUser(userInfo);
-          
-  //         // Set user online
-  //         setUserOnlineStatus(userData.userId, true);
-  //       } catch (error) {
-  //         console.error('Error fetching user data:', error);
-  //         setUser(null);
-  //       }
-  //     } else {
-  //       setUser(null);
-  //     }
-  //     setLoading(false);
-  //   });
-
-  //   return () => {
-  //     if (user?.userId) {
-  //       setUserOnlineStatus(user.userId, false);
-  //     }
-  //     unsubscribe();
-  //   };
-  // }, []);
-
-  // AUTO LOGIN ON REFRESH (Firebase listener)
-useEffect(() => {
-  const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-    if (firebaseUser) {
-      try {
-        // 1. Get the document from Firestore using the random Auth UID
-        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          
-          // 2. CRITICAL FIX: Use userData.userId (the custom name) 
-          // NOT firebaseUser.uid (the random string)
-          const userInfo = {
-            id: firebaseUser.uid,          // Keep the random ID as 'id' if needed for DB refs
-            userId: userData.userId,       // This is 'raheelkhan_2629'
-            email: firebaseUser.email,
-            fullName: userData?.name || userData?.fullName || '' 
-          };
-          
-          setUser(userInfo);
-          
-          // 3. Set user online using the CUSTOM ID
-          setUserOnlineStatus(firebaseUser.uid, userData.userId, true);
-          
-          // Also save this correct session
-          await saveUserSession(firebaseUser); 
-        } else {
-          console.error("No user document found in Firestore!");
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            
+            // CHECK IF USER IS SUSPENDED
+            if (userData.isSuspended === true) {
+              setSuspendedError("Your account has been suspended due to inappropriate usage of this app. Please contact support for assistance.");
+              await signOut(auth);
+              setUser(null);
+              localStorage.removeItem("activeChatId");
+              localStorage.removeItem("user");
+              setLoading(false);
+              return;
+            }
+            
+            // 2. Use userData.userId (the custom name) 
+            const userInfo = {
+              id: firebaseUser.uid,
+              userId: userData.userId,
+              email: firebaseUser.email,
+              fullName: userData?.name || userData?.fullName || '',
+              isAdmin: userData.isAdmin || false
+            };
+            
+            setUser(userInfo);
+            
+            // 3. Set user online using the CUSTOM ID
+            setUserOnlineStatus(firebaseUser.uid, userData.userId, true);
+            
+            // Also save this correct session
+            await saveUserSession(firebaseUser); 
+          } else {
+            console.error("No user document found in Firestore!");
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          setUser(null);
         }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
+      } else {
         setUser(null);
+        localStorage.removeItem("activeChatId");
+        localStorage.removeItem("user");
       }
-    } else {
-      setUser(null);
-      localStorage.removeItem("activeChatId");
-      localStorage.removeItem("user");
-    }
-    setLoading(false);
-  });
+      setLoading(false);
+    });
 
-  return () => {
-    // This cleanup runs on unmount
-    unsubscribe();
-  };
-}, []); // Combined into one useEffect to prevent race conditions
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, suspendedError, setSuspendedError }}>
       {children}
     </AuthContext.Provider>
   );
