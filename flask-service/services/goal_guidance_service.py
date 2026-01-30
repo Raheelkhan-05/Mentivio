@@ -44,7 +44,7 @@ class GoalGuidanceService:
         }
         
         # Semantic similarity threshold
-        self.semantic_threshold = 0.5
+        self.semantic_threshold = 0.65
         
         # Cache for common career paths to ensure consistency
         self.career_cache = {}
@@ -413,7 +413,7 @@ IMPORTANT RULES:
                     matched.append({
                         "required_topic": req_topic,
                         "user_topic": best_match,
-                        "similarity": 0.5,
+                        "similarity": 0.65,
                         "progress": topic_progress[best_match]
                     })
         
@@ -445,7 +445,7 @@ IMPORTANT RULES:
                     best_score = score
                     best_match = user_topic
         
-        return best_match if best_score >= 0.5 else None
+        return best_match if best_score >= 0.65 else None
     
     def _create_minor_milestone_with_topics(self, skill_name: str,
                                            required_topics: List[str],
