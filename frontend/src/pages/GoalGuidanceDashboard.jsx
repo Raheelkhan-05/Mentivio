@@ -36,7 +36,6 @@ const GoalPathDashboard = () => {
       }
     } catch (err) {
       console.error('Error fetching goal path:', err);
-      setError('Failed to load goal path');
     } finally {
       setLoads(false);
     }
