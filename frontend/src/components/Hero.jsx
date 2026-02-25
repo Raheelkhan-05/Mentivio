@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Brain, Target, MessageCircle } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
+import hero from "../assets/1.jpg";
 
 const Hero = () => {
   const navigate = useNavigate();
@@ -103,7 +104,7 @@ const Hero = () => {
           >
             <div className="relative">
               <img
-                src="https://drive.google.com/file/d/1oCL4sHgNsgdBEXBobWlo0sduw-xF61Ev/view?usp=drive_link"
+                src={hero}
                 alt="Students learning with AI technology"
                 className="rounded-2xl shadow-2xl w-full h-auto"
                 loading="lazy"
