@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, Brain, Target, MessageCircle, X } from 'lucide-react';
+import step1Img from "../assets/2.jpg";
+import step2Img from "../assets/3.jpg";
+import step3Img from "../assets/4.png";
+import step4Img from "../assets/5.png";
 
 const HowItWorks = () => {
   const [activeStep, setActiveStep] = useState(null);
@@ -13,8 +17,7 @@ const HowItWorks = () => {
        moreInfo:
         'Simply upload your study materials in text or PDF format — whether they’re class notes, research papers, or entire textbooks. Mentivio instantly processes your files, understands your syllabus, and prepares them for interactive learning. You can then directly ask questions, get explanations, or summarize topics — all based on your own materials.',
       color: 'from-green-400 to-blue-500',
-      image:
-        'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+      image: step1Img
     },
     {
       icon: Brain,
@@ -24,8 +27,7 @@ const HowItWorks = () => {
       moreInfo:
         'Struggling with complex concepts? Chat directly with your AI Tutor — it explains topics in simple terms, generates examples, and ensures you truly understand before moving ahead. You can create flashcards for quick revision and take personalized quizzes to test your knowledge. The intelligent tutor continuously adapts to your learning speed, ensuring a smooth and personalized learning journey.',
       color: 'from-purple-500 to-blue-500',
-      image:
-        'https://images.unsplash.com/photo-1677442136019-21780ecad995?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+      image: step2Img
     },
     {
       icon: Target,
@@ -35,8 +37,7 @@ const HowItWorks = () => {
       moreInfo:
         'Transform your learning journey from random studying to goal-driven progress. Set clear academic or career goals — whether it’s mastering a subject, preparing for exams, or learning new skills — and Mentivio crafts a personalized roadmap for you. Get curated learning paths, progress tracking, and smart reminders that keep you motivated and consistent. Your learning now has direction, purpose, and results.',
       color: 'from-blue-500 to-green-400',
-      image:
-        'https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+      image: step3Img
     },
     {
       icon: MessageCircle,
@@ -46,8 +47,7 @@ const HowItWorks = () => {
       moreInfo:
         'No more switching between apps to discuss study topics! Mentivio brings all your conversations right where you learn. You can directly chat with your friends about specific subjects, create dedicated discussion groups, and post your questions to the community. Others can respond and help you out using hashtags linked to your post — making collaboration easy, focused, and fun. Learning becomes truly social and effortless here.',
       color: 'from-blue-500 to-purple-500',
-      image:
-        'https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+      image: step4Img
     },
   ];
 
