@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, Brain, Target, MessageCircle, X } from 'lucide-react';
-import step1Img from "../assets/2.jpg";
-import step2Img from "../assets/3.jpg";
-import step3Img from "../assets/4.png";
-import step4Img from "../assets/5.png";
+import step2Img from "../assets/2.jpg";
+import step4Img from "../assets/3.jpg";
+import step1Img from "../assets/4.png";
+import step3Img from "../assets/5.png";
 
 const HowItWorks = () => {
   const [activeStep, setActiveStep] = useState(null);
